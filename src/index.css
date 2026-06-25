@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+:root {
+  --theme-bg: #FFFFFF;
+  --theme-card: #F1F5F9; /* Surface Cards: light gray */
+  --theme-primary: #0F172A; /* Primary Text: dark */
+  --theme-secondary: #475569; /* Secondary Text: gray */
+  --theme-muted: #64748B; /* Muted Text: medium gray */
+  --theme-border: #CBD5E1; /* Subtle border */
+  
+  --theme-accent-from: #6366F1;
+  --theme-accent-to: #8B5CF6;
+}
+
+.dark {
+  --theme-bg: #0B1020; /* Dark Theme Background: very dark */
+  --theme-card: #141B2D; /* Dark Theme Surface Cards: dark gray */
+  --theme-primary: #FFFFFF; /* Primary Text: white */
+  --theme-secondary: #94A3B8; /* Secondary Text: light gray */
+  --theme-muted: #8293A4; /* Muted Text: medium gray (WCAG AA compliant contrast on #141B2D) */
+  --theme-border: #1E293B; /* Subtle dark border */
+  
+  --theme-accent-from: #8B5CF6;
+  --theme-accent-to: #EC4899;
+}
+
+@theme {
+  --color-theme-bg: var(--theme-bg);
+  --color-theme-card: var(--theme-card);
+  --color-theme-primary: var(--theme-primary);
+  --color-theme-secondary: var(--theme-secondary);
+  --color-theme-muted: var(--theme-muted);
+  --color-theme-border: var(--theme-border);
+  --color-theme-accent-from: var(--theme-accent-from);
+  --color-theme-accent-to: var(--theme-accent-to);
+}
+
+/* Base custom styles to guarantee readable text and clean scrolling globally */
+html, body {
+  background-color: var(--theme-bg);
+  color: var(--theme-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Ensure custom scrollbars stay elegant and high contrast */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--theme-border);
+  border-radius: 9999px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-secondary);
+}
