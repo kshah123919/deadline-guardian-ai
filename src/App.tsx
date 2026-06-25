@@ -214,6 +214,8 @@ export default function App() {
             onClearHistory={handleClearHistory}
             onAddTaskDirectly={handleAddTaskDirectly}
             isDark={isDarkMode}
+            tasks={tasks}
+            profile={profile}
           />
         );
       case 'analytics':

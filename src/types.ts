@@ -10,6 +10,7 @@ export interface Task {
   category: string;
   progress: number; // 0 to 100
   status: TaskStatus;
+  estimatedDuration?: string; // e.g. "2h", "4h", "45m"
 }
 
 export interface Message {

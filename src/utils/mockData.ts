@@ -27,6 +27,7 @@ export const INITIAL_TASKS: Task[] = [
     category: 'Work',
     progress: 75,
     status: 'in_progress',
+    estimatedDuration: '4h',
   },
   {
     id: 'task-2',
@@ -37,6 +38,7 @@ export const INITIAL_TASKS: Task[] = [
     category: 'Design',
     progress: 30,
     status: 'in_progress',
+    estimatedDuration: '2h',
   },
   {
     id: 'task-3',
@@ -47,6 +49,7 @@ export const INITIAL_TASKS: Task[] = [
     category: 'Docs',
     progress: 0,
     status: 'todo',
+    estimatedDuration: '1.5h',
   },
   {
     id: 'task-4',
@@ -57,6 +60,7 @@ export const INITIAL_TASKS: Task[] = [
     category: 'Work',
     progress: 100,
     status: 'completed',
+    estimatedDuration: '1h',
   },
   {
     id: 'task-5',
@@ -67,6 +71,7 @@ export const INITIAL_TASKS: Task[] = [
     category: 'Analytics',
     progress: 0,
     status: 'todo',
+    estimatedDuration: '3h',
   },
   {
     id: 'task-6',
@@ -77,6 +82,7 @@ export const INITIAL_TASKS: Task[] = [
     category: 'Engineering',
     progress: 10,
     status: 'in_progress',
+    estimatedDuration: '5h',
   }
 ];
 
