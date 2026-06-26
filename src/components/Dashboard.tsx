@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
   CheckCircle2, Circle, AlertTriangle, Play, Calendar, 
-  TrendingUp, Sparkles, Plus, ChevronRight, Activity as ActivityIcon, Clock, Award
+  TrendingUp, Sparkles, Plus, ChevronRight, Activity as ActivityIcon, Clock, Award,
+  LayoutDashboard, Loader2, ShieldAlert
 } from 'lucide-react';
 import { Task, Activity, UserProfile } from '../types';
 import { MOTIVATIONAL_QUOTES } from '../utils/mockData';
@@ -27,12 +28,60 @@ export default function Dashboard({
   isDark
 }: DashboardProps) {
   const [quote, setQuote] = useState({ text: '', author: '' });
+  const [currentSubTab, setCurrentSubTab] = useState<'core' | 'mission'>('core');
+  const [analysis, setAnalysis] = useState<any>(null);
+  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   useEffect(() => {
     // Select a random quote
     const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
     setQuote(randomQuote);
   }, []);
+
+  useEffect(() => {
+    const fetchMissionControl = async () => {
+      setIsLoadingAnalysis(true);
+      setAnalysisError(null);
+      try {
+        const response = await fetch("/api/mission-control", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tasks,
+            userProfile: profile
+          })
+        });
+        if (!response.ok) {
+          throw new Error(`Server returned status: ${response.status}`);
+        }
+        const data = await response.json();
+        setAnalysis(data);
+      } catch (err: any) {
+        console.error("Error fetching Mission Control:", err);
+        setAnalysisError(err.message || "Failed to load Mission Control metrics.");
+      } finally {
+        setIsLoadingAnalysis(false);
+      }
+    };
+
+    fetchMissionControl();
+  }, [tasks, profile]);
+
+  const renderMarkdown = (text: string) => {
+    if (!text) return null;
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return (
+          <strong key={index} className="font-extrabold text-indigo-600 dark:text-indigo-400">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      return part;
+    });
+  };
 
   // Filter tasks for today
   const todayTasks = tasks.filter(task => {
@@ -120,8 +169,40 @@ export default function Dashboard({
         </button>
       </div>
 
-      {/* Grid Layout of Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Segmented Controller for Dashboard Modes */}
+      <div className="flex items-center p-1.5 bg-theme-card border border-theme-border rounded-2xl w-full sm:w-fit gap-1">
+        <button
+          onClick={() => setCurrentSubTab('core')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            currentSubTab === 'core'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/15'
+              : 'text-theme-secondary hover:text-theme-primary hover:bg-theme-bg'
+          }`}
+        >
+          <LayoutDashboard className="w-4 h-4" />
+          <span>Guardian Core</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentSubTab('mission')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all relative cursor-pointer ${
+            currentSubTab === 'mission'
+              ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/20'
+              : 'text-theme-secondary hover:text-theme-primary hover:bg-theme-bg'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-violet-400" />
+          <span>AI Mission Control</span>
+          <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest bg-amber-500 text-slate-900 rounded-full font-mono scale-90">
+            PRO
+          </span>
+        </button>
+      </div>
+
+      {currentSubTab === 'core' ? (
+        <>
+          {/* Grid Layout of Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Productivity Overview Card (Left 5 cols) */}
         <div className="lg:col-span-5 flex flex-col justify-between bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm">
@@ -391,6 +472,372 @@ export default function Dashboard({
         </div>
 
       </div>
+        </>
+      ) : (
+        /* MISSION CONTROL DASHBOARD */
+        <div className="space-y-6">
+          {isLoadingAnalysis && !analysis ? (
+            /* DYNAMIC HIGH-FIDELITY LOADING SHIMMER */
+            <div className="space-y-6 animate-pulse">
+              <div className="bg-theme-card border border-theme-border rounded-2xl p-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />
+                  <div className="h-4 bg-theme-bg/60 rounded w-48"></div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-theme-bg/60 rounded w-full"></div>
+                  <div className="h-4 bg-theme-bg/60 rounded w-5/6"></div>
+                  <div className="h-4 bg-theme-bg/60 rounded w-4/5"></div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-theme-card border border-theme-border rounded-2xl p-6 space-y-4 h-64">
+                  <div className="h-5 bg-theme-bg/60 rounded w-1/3"></div>
+                  <div className="h-10 bg-theme-bg/60 rounded-full w-full"></div>
+                  <div className="h-4 bg-theme-bg/60 rounded w-3/4"></div>
+                </div>
+
+                <div className="bg-theme-card border border-theme-border rounded-2xl p-6 space-y-4 h-64">
+                  <div className="h-5 bg-theme-bg/60 rounded w-1/3"></div>
+                  <div className="space-y-3">
+                    <div className="h-12 bg-theme-bg/60 rounded-xl"></div>
+                    <div className="h-12 bg-theme-bg/60 rounded-xl"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : analysisError ? (
+            /* ERROR RESOLUTION PANEL */
+            <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-6 text-center max-w-xl mx-auto">
+              <ShieldAlert className="w-10 h-10 text-rose-500 mx-auto mb-3" />
+              <h4 className="text-sm font-bold text-theme-primary">Analysis Sync Failure</h4>
+              <p className="text-xs text-theme-secondary mt-1">{analysisError}</p>
+              <button 
+                onClick={() => {
+                  setAnalysis(null);
+                  setAnalysisError(null);
+                  setIsLoadingAnalysis(true);
+                }}
+                className="mt-4 px-4 py-2 bg-theme-bg hover:bg-theme-border border border-theme-border rounded-xl text-xs font-semibold text-theme-primary cursor-pointer"
+              >
+                Retry Mission Control analysis
+              </button>
+            </div>
+          ) : tasks.length === 0 || (analysis && analysis.noTasks) ? (
+            /* EMPTY TASK STATE */
+            <div className="flex flex-col items-center justify-center py-16 border border-dashed border-theme-border rounded-2xl text-center max-w-xl mx-auto bg-theme-card/30 p-8">
+              <div className="p-4 bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-500 rounded-full mb-4">
+                <Sparkles className="w-10 h-10 animate-pulse" />
+              </div>
+              <h3 className="text-lg font-bold text-theme-primary">Your Mission Control is Ready</h3>
+              <p className="text-xs text-theme-secondary mt-2 leading-relaxed">
+                You currently don't have any active tasks in your workspace. Add a task to initiate Guardian's AI-powered automated scheduling briefing, risk analysis, workload metrics, and smart timelines.
+              </p>
+              <button
+                onClick={onCreateTaskClick}
+                className="mt-6 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/15 transition-all cursor-pointer"
+              >
+                Create Your First Task
+              </button>
+            </div>
+          ) : (
+            /* DYNAMIC AI PREMIUM DASHBOARDS */
+            <div className="space-y-6">
+              
+              {/* 6. Emergency Mode Banner */}
+              {analysis?.emergencyMode?.isTriggered && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-rose-500/10 border-2 border-rose-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden backdrop-blur-xl"
+                >
+                  <div className="absolute top-0 right-0 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl -z-10" />
+                  
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-rose-500 text-white rounded-xl animate-bounce shrink-0 shadow-md shadow-rose-500/20">
+                        <AlertTriangle className="w-5 h-5 stroke-[2]" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider bg-rose-500 text-white px-2 py-0.5 rounded font-mono">
+                            EMERGENCY ACTIVATED
+                          </span>
+                          <span className="text-xs text-rose-500 font-semibold font-mono animate-pulse">
+                            BREACH RISK HIGH
+                          </span>
+                        </div>
+                        <h3 className="text-base font-extrabold text-theme-primary mt-1">
+                          Critical Deadline At Risk: <span className="text-rose-500 font-black">"{analysis.emergencyMode.criticalTaskTitle || 'Workspace Task'}"</span>
+                        </h3>
+                        <p className="text-xs text-theme-secondary max-w-2xl leading-relaxed mt-0.5">
+                          {analysis.emergencyMode.remainingWorkExplanation || "A pending task deadline is expiring soon. Immediate intervention is required to secure this milestone."}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col items-start md:items-end shrink-0 gap-1.5 p-3 bg-theme-bg/60 border border-rose-500/25 rounded-xl font-mono text-xs w-full md:w-auto">
+                      <span className="text-theme-muted uppercase tracking-widest text-[9px] font-bold">Secure Probability</span>
+                      <span className="text-xl font-black text-rose-500">
+                        {analysis.emergencyMode.estimatedCompletionProbability || 25}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {analysis.emergencyMode.immediateRecommendation && (
+                    <div className="mt-4 pt-3 border-t border-rose-500/20 flex items-start gap-2 bg-rose-500/5 -mx-5 -mb-5 px-5 py-3">
+                      <span className="text-xs font-bold text-rose-500 shrink-0 font-mono">RESCUE TACTIC:</span>
+                      <p className="text-xs text-theme-primary italic font-medium leading-relaxed">
+                        {analysis.emergencyMode.immediateRecommendation}
+                      </p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* 1. Daily Briefing Card */}
+              <div className="bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-3 text-indigo-500/10">
+                  <Sparkles className="w-32 h-32 rotate-12" />
+                </div>
+                
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+                  <h3 className="text-sm font-bold text-theme-primary uppercase tracking-widest font-mono">
+                    Daily Productivity Briefing
+                  </h3>
+                  {isLoadingAnalysis && (
+                    <Loader2 className="w-4 h-4 text-indigo-500 animate-spin ml-2" />
+                  )}
+                </div>
+
+                <div className="text-sm text-theme-primary leading-relaxed space-y-2 whitespace-pre-wrap font-sans">
+                  {renderMarkdown(analysis.dailyBriefing)}
+                </div>
+              </div>
+
+              {/* Mid Columns (Workload Meter & Smart Execution Plan vs Smart Timeline) */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* Left Side: Workload & Plan (7 cols) */}
+                <div className="lg:col-span-7 space-y-6">
+                  
+                  {/* 3. AI Workload Meter */}
+                  <div className="bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base font-bold text-theme-primary">AI Workload Meter</h3>
+                        <Clock className="w-4.5 h-4.5 text-theme-muted" />
+                      </div>
+
+                      {/* Meter Display */}
+                      <div className="my-6">
+                        <div className="flex justify-between items-end mb-2">
+                          <div>
+                            <span className="text-[10px] text-theme-muted uppercase tracking-widest font-mono block">Workload Rating</span>
+                            <span className={`text-2xl font-black ${
+                              analysis.workloadMeter?.level === 'Light' ? 'text-emerald-500' :
+                              analysis.workloadMeter?.level === 'Balanced' ? 'text-indigo-500 dark:text-indigo-400' :
+                              analysis.workloadMeter?.level === 'Heavy' ? 'text-amber-500' : 'text-rose-500'
+                            }`}>
+                              {analysis.workloadMeter?.level || 'Balanced'}
+                            </span>
+                          </div>
+                          
+                          <span className={`w-3 h-3 rounded-full ${
+                            analysis.workloadMeter?.level === 'Light' ? 'bg-emerald-500' :
+                            analysis.workloadMeter?.level === 'Balanced' ? 'bg-indigo-500' :
+                            analysis.workloadMeter?.level === 'Heavy' ? 'bg-amber-500' : 'bg-rose-500'
+                          }`} />
+                        </div>
+
+                        <div className="w-full h-3 bg-theme-bg border border-theme-border/50 rounded-full overflow-hidden flex gap-0.5">
+                          <div className={`h-full rounded-l-full transition-all duration-500 ${
+                            analysis.workloadMeter?.level === 'Light' ? 'w-[25%] bg-emerald-500' :
+                            analysis.workloadMeter?.level === 'Balanced' ? 'w-[50%] bg-indigo-500' :
+                            analysis.workloadMeter?.level === 'Heavy' ? 'w-[75%] bg-amber-500' : 'w-[100%] bg-rose-500'
+                          }`} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-theme-secondary bg-theme-bg/40 p-3.5 border border-theme-border/40 rounded-xl leading-relaxed">
+                      {analysis.workloadMeter?.explanation}
+                    </p>
+                  </div>
+
+                  {/* 4. Smart Execution Plan */}
+                  <div className="bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                      <CheckCircle2 className="w-4.5 h-4.5 text-indigo-500" />
+                      <h3 className="text-base font-bold text-theme-primary">Smart Execution Plan</h3>
+                    </div>
+
+                    <div className="space-y-4">
+                      {analysis.executionPlan?.map((step: any, index: number) => {
+                        const originalTask = tasks.find(t => t.id === step.taskId);
+                        return (
+                          <div key={step.taskId || index} className="flex gap-4 items-start relative group">
+                            {index < analysis.executionPlan.length - 1 && (
+                              <div className="absolute top-8 left-4 bottom-0 w-0.5 bg-theme-border group-hover:bg-indigo-500/30 transition-colors" />
+                            )}
+                            
+                            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-500 dark:text-indigo-400 font-mono font-bold text-xs flex items-center justify-center shrink-0 border border-indigo-500/20">
+                              {index + 1}
+                            </div>
+
+                            <div className="flex-1 bg-theme-bg/30 border border-theme-border hover:border-indigo-500/30 p-3.5 rounded-xl transition-all">
+                              <div className="flex items-center justify-between gap-2">
+                                <h4 className="text-xs font-bold text-theme-primary">{step.taskTitle}</h4>
+                                {originalTask && (
+                                  <span className="text-[10px] font-mono text-theme-secondary font-bold">
+                                    {originalTask.progress}% Complete
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-theme-secondary mt-1.5 leading-relaxed font-sans">
+                                {step.reason}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Right Side: Smart Timeline (5 cols) */}
+                <div className="lg:col-span-5">
+                  {/* 5. Smart Timeline */}
+                  <div className="bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm h-full flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4.5 h-4.5 text-indigo-500" />
+                          <h3 className="text-base font-bold text-theme-primary">AI Smart Timeline</h3>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold px-2.5 py-1 bg-theme-bg border border-theme-border text-theme-secondary rounded-lg">
+                          Visual Day
+                        </span>
+                      </div>
+
+                      <div className="space-y-3 font-sans">
+                        {analysis.smartTimeline?.map((block: any, index: number) => {
+                          return (
+                            <div 
+                              key={index} 
+                              className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 border rounded-xl gap-2 transition-all ${
+                                block.isTask 
+                                  ? 'bg-indigo-500/5 border-indigo-500/20 hover:border-indigo-500/40' 
+                                  : 'bg-theme-bg/40 border-theme-border border-dashed'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs font-mono font-bold text-indigo-500 dark:text-indigo-400 shrink-0 bg-indigo-500/10 dark:bg-indigo-500/25 px-2.5 py-1 rounded-lg">
+                                  {block.timeSlot}
+                                </span>
+                                <div className="overflow-hidden">
+                                  <h4 className="text-xs font-bold text-theme-primary truncate">{block.activity}</h4>
+                                  <p className="text-[10px] text-theme-secondary mt-0.5 font-mono">{block.durationMinutes} minutes</p>
+                                </div>
+                              </div>
+
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded font-mono w-fit uppercase ${
+                                block.isTask 
+                                  ? 'bg-indigo-600 text-white' 
+                                  : 'bg-theme-border text-theme-secondary'
+                              }`}>
+                                {block.isTask ? 'FOCUS' : 'REST'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* 2. Deadline Risk Predictor */}
+              <div className="bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4.5 h-4.5 text-rose-500" />
+                    <h3 className="text-base font-bold text-theme-primary">Deadline Risk Predictor</h3>
+                  </div>
+                  <span className="text-xs font-mono font-semibold text-theme-secondary">
+                    Active risk matrices
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {analysis.deadlineRisks?.map((risk: any, index: number) => {
+                    const isCritical = risk.riskLevel === 'critical';
+                    const isModerate = risk.riskLevel === 'moderate';
+                    return (
+                      <div 
+                        key={risk.taskId || index} 
+                        className={`border rounded-2xl p-4 flex flex-col justify-between transition-all ${
+                          isCritical ? 'bg-rose-500/5 border-rose-500/20 hover:border-rose-500/40' :
+                          isModerate ? 'bg-amber-500/5 border-amber-500/20 hover:border-amber-500/40' :
+                          'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex justify-between items-start gap-2 mb-2">
+                            <h4 className="text-xs font-bold text-theme-primary line-clamp-1">{risk.taskTitle}</h4>
+                            <span className={`text-[9px] font-black font-mono px-2 py-0.5 rounded uppercase ${
+                              isCritical ? 'bg-rose-500 text-white' :
+                              isModerate ? 'bg-amber-500 text-slate-900' :
+                              'bg-emerald-500 text-white'
+                            }`}>
+                              {risk.riskLevel}
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-theme-secondary line-clamp-3 leading-relaxed mb-4">
+                            {risk.reason}
+                          </p>
+                        </div>
+
+                        <div className="border-t border-theme-border/40 pt-3 mt-3 space-y-3">
+                          <div>
+                            <div className="flex justify-between text-[10px] mb-1 font-mono">
+                              <span className="text-theme-secondary">Completion Probability</span>
+                              <span className={`font-bold ${
+                                isCritical ? 'text-rose-500' : isModerate ? 'text-amber-500' : 'text-emerald-500'
+                              }`}>{risk.successProbability}%</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-theme-bg rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  isCritical ? 'bg-rose-500' : isModerate ? 'bg-amber-500' : 'bg-emerald-500'
+                                }`}
+                                style={{ width: `${risk.successProbability}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="bg-theme-bg/60 border border-theme-border/30 p-2 rounded-xl">
+                            <span className="text-[9px] font-bold text-indigo-500 dark:text-indigo-400 font-mono block uppercase">Guardian Move:</span>
+                            <p className="text-[11px] text-theme-primary italic mt-0.5 font-sans leading-relaxed line-clamp-2">
+                              {risk.recommendedAction}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

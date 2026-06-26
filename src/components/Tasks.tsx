@@ -189,27 +189,27 @@ export default function Tasks({
       </div>
 
       {/* Control Bar: Search and Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 bg-theme-card border border-theme-border p-4 rounded-2xl shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap items-stretch sm:items-center gap-4 lg:gap-6 bg-theme-card border border-theme-border p-5 rounded-2xl shadow-sm">
         
         {/* Search */}
-        <div className="md:col-span-5 relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-muted" />
+        <div className="flex-grow flex-shrink-0 lg:flex-1 min-w-[200px] relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-theme-muted" />
           <input
             type="text"
             placeholder="Search tasks..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-theme-bg border-theme-border text-theme-primary placeholder-theme-muted"
+            className="w-full pl-11 pr-5 py-3 rounded-xl text-sm border focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-theme-bg border-theme-border text-theme-primary placeholder-theme-muted"
           />
         </div>
 
         {/* Status Filter */}
-        <div className="md:col-span-2.5 flex items-center gap-2">
-          <Filter className="w-3.5 h-3.5 text-theme-muted shrink-0" />
+        <div className="flex items-center gap-2.5 flex-1 sm:flex-none">
+          <Filter className="w-4 h-4 text-theme-muted shrink-0" />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="w-full px-3 py-2.5 rounded-xl text-sm border focus:outline-none transition-all bg-theme-bg border-theme-border text-theme-secondary"
+            className="w-full sm:w-auto min-w-[160px] sm:min-w-[180px] lg:min-w-[200px] px-4 py-3 rounded-xl text-sm border focus:outline-none transition-all bg-theme-bg border-theme-border text-theme-secondary cursor-pointer"
           >
             <option value="all">All Statuses</option>
             <option value="todo">To Do</option>
@@ -219,11 +219,11 @@ export default function Tasks({
         </div>
 
         {/* Priority Filter */}
-        <div className="md:col-span-2.5">
+        <div className="flex-1 sm:flex-none">
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value as any)}
-            className="w-full px-3 py-2.5 rounded-xl text-sm border focus:outline-none transition-all bg-theme-bg border-theme-border text-theme-secondary"
+            className="w-full sm:w-auto min-w-[160px] sm:min-w-[180px] lg:min-w-[200px] px-4 py-3 rounded-xl text-sm border focus:outline-none transition-all bg-theme-bg border-theme-border text-theme-secondary cursor-pointer"
           >
             <option value="all">All Priorities</option>
             <option value="high">High Priority</option>
@@ -233,11 +233,11 @@ export default function Tasks({
         </div>
 
         {/* Category Filter */}
-        <div className="md:col-span-2">
+        <div className="flex-1 sm:flex-none">
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl text-sm border focus:outline-none transition-all bg-theme-bg border-theme-border text-theme-secondary"
+            className="w-full sm:w-auto min-w-[160px] sm:min-w-[180px] lg:min-w-[200px] px-4 py-3 rounded-xl text-sm border focus:outline-none transition-all bg-theme-bg border-theme-border text-theme-secondary cursor-pointer"
           >
             <option value="all">All Categories</option>
             {distinctCategories.map(cat => (
