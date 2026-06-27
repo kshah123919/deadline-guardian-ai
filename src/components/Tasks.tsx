@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, Filter, Plus, Calendar, Clock, Edit2, Trash2, 
-  CheckCircle2, Circle, X, Check, Tag, Percent, AlertCircle
+  CheckCircle2, Circle, X, Check, Tag, Percent, AlertCircle, Play
 } from 'lucide-react';
 import { Task, Priority, TaskStatus } from '../types';
 
@@ -15,6 +15,7 @@ interface TasksProps {
   isDark: boolean;
   isAddModalOpenInitially?: boolean;
   onCloseAddModalInitially?: () => void;
+  onStartFocusSession?: (task: Task) => void;
 }
 
 export default function Tasks({
@@ -25,7 +26,8 @@ export default function Tasks({
   onToggleTaskStatus,
   isDark,
   isAddModalOpenInitially = false,
-  onCloseAddModalInitially
+  onCloseAddModalInitially,
+  onStartFocusSession
 }: TasksProps) {
   // Search & Filter State
   const [search, setSearch] = useState('');
@@ -364,6 +366,17 @@ export default function Tasks({
                       </button>
                     </div>
                   </div>
+
+                  {/* Start Focus Session Button */}
+                  {!isCompleted && onStartFocusSession && (
+                    <button
+                      onClick={() => onStartFocusSession(task)}
+                      className="w-full mt-2 py-2 px-4 bg-indigo-500/10 hover:bg-indigo-600 hover:text-white text-indigo-500 dark:text-indigo-400 dark:hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 border border-indigo-500/10 hover:border-indigo-500 transition-all cursor-pointer"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Start Focus Session</span>
+                    </button>
+                  )}
 
                 </div>
 

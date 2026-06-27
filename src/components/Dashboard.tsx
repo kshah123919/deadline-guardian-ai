@@ -5,7 +5,7 @@ import {
   TrendingUp, Sparkles, Plus, ChevronRight, Activity as ActivityIcon, Clock, Award,
   LayoutDashboard, Loader2, ShieldAlert
 } from 'lucide-react';
-import { Task, Activity, UserProfile } from '../types';
+import { Task, Activity, UserProfile, FocusSession } from '../types';
 import { MOTIVATIONAL_QUOTES } from '../utils/mockData';
 
 interface DashboardProps {
@@ -16,6 +16,8 @@ interface DashboardProps {
   onCreateTaskClick: () => void;
   onToggleTaskStatus: (id: string) => void;
   isDark: boolean;
+  focusSessions?: FocusSession[];
+  onStartFocusSession?: (task: Task) => void;
 }
 
 export default function Dashboard({
@@ -25,7 +27,9 @@ export default function Dashboard({
   onNavigate,
   onCreateTaskClick,
   onToggleTaskStatus,
-  isDark
+  isDark,
+  focusSessions = [],
+  onStartFocusSession
 }: DashboardProps) {
   const [quote, setQuote] = useState({ text: '', author: '' });
   const [currentSubTab, setCurrentSubTab] = useState<'core' | 'mission'>('core');
@@ -107,14 +111,36 @@ export default function Dashboard({
     ? Math.round((completedTasks.length / totalTasksCount) * 100) 
     : 0;
 
-  // Let's formulate a Productivity Score out of 100 based on completion rate and priority ratios
+  // Let's formulate a Productivity Score out of 100 based on completion rate, priority ratios, progress, and overdue deadlines
+  const pendingTasks = tasks.filter(t => t.status !== 'completed');
+  const overdueTasks = tasks.filter(t => t.status !== 'completed' && new Date(t.deadline).getTime() < Date.now());
   const highPriorityTasks = tasks.filter(t => t.priority === 'high');
   const completedHigh = highPriorityTasks.filter(t => t.status === 'completed');
-  const highRatio = highPriorityTasks.length > 0 ? (completedHigh.length / highPriorityTasks.length) : 1;
-  const productivityScore = Math.min(
-    100,
-    Math.round((completedPercentage * 0.7) + (highRatio * 30))
-  );
+  
+  const completionRate = totalTasksCount > 0 ? (completedTasks.length / totalTasksCount) : 0;
+  const highPriorityRatio = highPriorityTasks.length > 0 ? (completedHigh.length / highPriorityTasks.length) : 1;
+  const averageProgress = totalTasksCount > 0 ? (tasks.reduce((sum, t) => sum + t.progress, 0) / totalTasksCount) : 0;
+  
+  // Deadline performance: Ratio of non-overdue tasks to total pending tasks
+  const deadlinePerformance = pendingTasks.length > 0 
+    ? (1 - (overdueTasks.length / pendingTasks.length)) 
+    : 1;
+
+  // Combine components into a precise 100-point dynamic scale:
+  // - 40% completion rate
+  // - 20% high priority ratio
+  // - 20% average progress
+  // - 20% deadline performance (lack of overdue tasks)
+  const calculatedScore = totalTasksCount > 0
+    ? Math.round(
+        (completionRate * 40) + 
+        (highPriorityRatio * 20) + 
+        ((averageProgress / 100) * 20) + 
+        (deadlinePerformance * 20)
+      )
+    : 0;
+
+  const productivityScore = Math.max(0, Math.min(100, calculatedScore));
 
   const getPriorityColor = (p: string) => {
     switch (p) {
@@ -200,56 +226,68 @@ export default function Dashboard({
       </div>
 
       {currentSubTab === 'core' ? (
-        <>
-          {/* Grid Layout of Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        totalTasksCount === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 border border-dashed border-theme-border rounded-2xl text-center max-w-xl mx-auto bg-theme-card/30 p-8">
+            <div className="p-4 bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-500 rounded-full mb-4">
+              <CheckCircle2 className="w-10 h-10 animate-pulse" />
+            </div>
+            <h3 className="text-lg font-bold text-theme-primary">Your Workspace is Empty</h3>
+            <p className="text-xs text-theme-secondary mt-2 leading-relaxed">
+              Create your first task to begin tracking productivity.
+            </p>
+            <button
+              onClick={onCreateTaskClick}
+              className="mt-6 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/15 transition-all cursor-pointer"
+            >
+              Create Your First Task
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Grid Layout of Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Productivity Overview Card (Left 5 cols) */}
-        <div className="lg:col-span-5 flex flex-col justify-between bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm">
+        {/* Productivity Overview Card (3 cols) */}
+        <div className="lg:col-span-3 flex flex-col justify-between bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm">
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold text-theme-primary">Productivity Health</h3>
               <TrendingUp className="w-4 h-4 text-emerald-500" />
             </div>
 
-            <div className="flex items-center gap-6 my-4">
+            <div className="flex flex-col items-center gap-4 my-4">
               {/* Score Circular gauge */}
               <div className="relative flex items-center justify-center shrink-0">
-                <svg className="w-24 h-24 transform -rotate-90">
+                <svg className="w-20 h-20 transform -rotate-90">
                   <circle
-                    cx="48"
-                    cy="48"
-                    r="40"
+                    cx="40"
+                    cy="40"
+                    r="32"
                     className="stroke-theme-bg fill-transparent"
-                    strokeWidth="8"
+                    strokeWidth="6"
                   />
                   <circle
-                    cx="48"
-                    cy="48"
-                    r="40"
+                    cx="40"
+                    cy="40"
+                    r="32"
                     className="stroke-indigo-600 dark:stroke-indigo-400 fill-transparent transition-all duration-1000"
-                    strokeWidth="8"
-                    strokeDasharray={251.2}
-                    strokeDashoffset={251.2 - (251.2 * productivityScore) / 100}
+                    strokeWidth="6"
+                    strokeDasharray={201.1}
+                    strokeDashoffset={201.1 - (201.1 * productivityScore) / 100}
                     strokeLinecap="round"
                   />
                 </svg>
                 <div className="absolute flex flex-col items-center">
-                  <span className="text-2xl font-black text-theme-primary leading-none">{productivityScore}</span>
-                  <span className="text-[10px] text-theme-muted uppercase tracking-widest font-mono mt-0.5">Score</span>
+                  <span className="text-xl font-black text-theme-primary leading-none">{productivityScore}</span>
+                  <span className="text-[8px] text-theme-muted uppercase tracking-widest font-mono mt-0.5">Score</span>
                 </div>
               </div>
 
-              <div>
-                <span className="text-xs font-mono text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-wider">Guardian Rating</span>
-                <h4 className="text-lg font-bold text-theme-primary mt-0.5">
+              <div className="text-center md:text-left">
+                <span className="text-[10px] font-mono text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-wider">Guardian Rating</span>
+                <h4 className="text-sm font-bold text-theme-primary mt-0.5">
                   {productivityScore >= 85 ? 'Outstanding Shield' : productivityScore >= 65 ? 'Optimal Focus' : 'Vulnerable Deadlines'}
                 </h4>
-                <p className="text-xs text-theme-secondary mt-1 max-w-xs">
-                  {productivityScore >= 85 
-                    ? 'Excellent focus! All critical parameters are perfectly secured.' 
-                    : 'A few upcoming deadlines require your attention to prevent breach.'}
-                </p>
               </div>
             </div>
           </div>
@@ -270,78 +308,281 @@ export default function Dashboard({
               </div>
             </div>
 
-            <div className="flex justify-between items-center bg-theme-bg/50 border border-theme-border/40 rounded-xl px-3.5 py-2">
-              <div className="flex items-center gap-2">
-                <Award className="w-4.5 h-4.5 text-amber-500" />
-                <span className="text-xs text-theme-secondary">Completion Velocity</span>
-              </div>
+            <div className="flex justify-between items-center bg-theme-bg/50 border border-theme-border/40 rounded-xl px-3 py-1.5">
+              <span className="text-xs text-theme-secondary">Velocity</span>
               <span className="text-xs font-mono font-bold text-theme-primary">
-                +{completedPercentage}% Completed
+                +{completedPercentage}%
               </span>
             </div>
           </div>
         </div>
 
-        {/* Quick Actions (Right 7 cols) */}
-        <div className="lg:col-span-7 bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+        {/* Today's Focus Card (3 cols) */}
+        <div className="lg:col-span-3 flex flex-col justify-between bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm">
           <div>
-            <h3 className="text-base font-bold text-theme-primary mb-4">Quick Navigation</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-theme-primary">Today's Focus</h3>
+              <div className="p-1.5 bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 rounded-lg">
+                <Play className="w-4 h-4 fill-current animate-pulse" />
+              </div>
+            </div>
+
+            {(() => {
+              const todayDateStr = new Date().toDateString();
+              const todaySessions = focusSessions.filter(s => new Date(s.startTime).toDateString() === todayDateStr);
+              
+              const totalFocusMs = todaySessions.reduce((sum, s) => sum + s.focusedTime, 0);
+              const totalInterruptions = todaySessions.reduce((sum, s) => sum + s.interruptionCount, 0);
+              const avgEfficiency = todaySessions.length > 0 
+                ? Math.round(todaySessions.reduce((sum, s) => sum + s.focusEfficiency, 0) / todaySessions.length)
+                : 100;
+              const longestMs = todaySessions.length > 0
+                ? Math.max(...todaySessions.map(s => s.focusedTime))
+                : 0;
+
+              const formatFocusMs = (ms: number) => {
+                if (ms <= 0) return '0m';
+                const seconds = Math.floor(ms / 1000);
+                const minutes = Math.floor(seconds / 60);
+                if (minutes > 0) return `${minutes}m`;
+                return `${seconds}s`;
+              };
+
+              if (todaySessions.length === 0) {
+                return (
+                  <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <span className="text-xs text-theme-muted font-medium">No sessions completed today.</span>
+                    <button
+                      onClick={() => onNavigate('tasks')}
+                      className="mt-4 px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600 hover:text-white text-indigo-600 dark:text-indigo-400 dark:hover:text-white text-xs font-semibold rounded-xl border border-indigo-500/10 transition-colors cursor-pointer"
+                    >
+                      Start Focus Session
+                    </button>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-2.5 my-1">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 rounded-xl bg-theme-bg border border-theme-border">
+                      <span className="text-[8px] text-theme-muted uppercase font-mono font-bold block">Focus Time</span>
+                      <span className="text-sm font-extrabold text-theme-primary mt-0.5 block">{formatFocusMs(totalFocusMs)}</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-theme-bg border border-theme-border">
+                      <span className="text-[8px] text-theme-muted uppercase font-mono font-bold block">Interruptions</span>
+                      <span className="text-sm font-extrabold text-theme-primary mt-0.5 block">{totalInterruptions}</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-theme-bg border border-theme-border">
+                      <span className="text-[8px] text-theme-muted uppercase font-mono font-bold block">Avg Efficiency</span>
+                      <span className="text-sm font-extrabold text-theme-primary mt-0.5 block">{avgEfficiency}%</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-theme-bg border border-theme-border">
+                      <span className="text-[8px] text-theme-muted uppercase font-mono font-bold block">Longest Run</span>
+                      <span className="text-sm font-extrabold text-theme-primary mt-0.5 block">{formatFocusMs(longestMs)}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          <div className="border-t border-theme-border pt-4 mt-4 flex items-center justify-between text-[10px] text-theme-muted uppercase font-mono font-bold">
+            <span>Interruption Shielding</span>
+            <span className="text-indigo-500">Live Tracker</span>
+          </div>
+        </div>
+
+        {/* Focus Insights Card (3 cols) */}
+        {(() => {
+          const calculateFocusStreak = (sessions: FocusSession[]) => {
+            if (sessions.length === 0) return 0;
+            
+            const dates = Array.from(new Set(
+              sessions.map(s => {
+                const d = new Date(s.startTime);
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+              })
+            )).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+            if (dates.length === 0) return 0;
+
+            let streak = 0;
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+            if (dates[0] !== todayStr && dates[0] !== yesterdayStr) {
+              return 0;
+            }
+
+            let currentExpected = new Date(dates[0]);
+            for (let i = 0; i < dates.length; i++) {
+              const dStr = dates[i];
+              const expectedStr = `${currentExpected.getFullYear()}-${String(currentExpected.getMonth() + 1).padStart(2, '0')}-${String(currentExpected.getDate()).padStart(2, '0')}`;
+              
+              if (dStr === expectedStr) {
+                streak++;
+                currentExpected.setDate(currentExpected.getDate() - 1);
+              } else {
+                break;
+              }
+            }
+            return streak;
+          };
+
+          const todayStr = new Date().toDateString();
+          const todaySessions = focusSessions.filter(s => new Date(s.startTime).toDateString() === todayStr);
+
+          const todayDeepWorkMs = todaySessions.reduce((sum, s) => sum + s.focusedTime, 0);
+
+          let todayLearningMs = 0;
+          let todayBreakMs = 0;
+          let todayEntertainmentMs = 0;
+
+          todaySessions.forEach(s => {
+            (s.interruptions || []).forEach(inter => {
+              const cat = inter.category;
+              if (cat === 'learning' || cat === 'reading') {
+                todayLearningMs += inter.duration;
+              } else if (cat === 'break' || cat === 'lunch') {
+                todayBreakMs += inter.duration;
+              } else if (cat === 'entertainment' || cat === 'gaming') {
+                todayEntertainmentMs += inter.duration;
+              }
+            });
+          });
+
+          const longestSessionMs = focusSessions.length > 0
+            ? Math.max(...focusSessions.map(s => s.focusedTime))
+            : 0;
+
+          const streakDays = calculateFocusStreak(focusSessions);
+
+          const formatMins = (ms: number) => {
+            const mins = Math.round(ms / 60000);
+            if (mins <= 0 && ms > 0) return '1m';
+            return `${mins}m`;
+          };
+
+          return (
+            <div className="lg:col-span-3 flex flex-col justify-between bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-bold text-theme-primary">Focus Insights</h3>
+                  <ActivityIcon className="w-4 h-4 text-indigo-500" />
+                </div>
+
+                <div className="space-y-2.5 my-1 text-xs">
+                  <div className="flex items-center justify-between border-b border-theme-border/50 pb-1.5">
+                    <span className="text-theme-secondary flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
+                      Deep Work
+                    </span>
+                    <span className="font-mono font-bold text-theme-primary">{formatMins(todayDeepWorkMs)}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-b border-theme-border/50 pb-1.5">
+                    <span className="text-theme-secondary flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                      Learning
+                    </span>
+                    <span className="font-mono font-bold text-theme-primary">{formatMins(todayLearningMs)}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-b border-theme-border/50 pb-1.5">
+                    <span className="text-theme-secondary flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
+                      Breaks
+                    </span>
+                    <span className="font-mono font-bold text-theme-primary">{formatMins(todayBreakMs)}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-b border-theme-border/50 pb-1.5">
+                    <span className="text-theme-secondary flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-rose-500 rounded-full" />
+                      Entertainment
+                    </span>
+                    <span className="font-mono font-bold text-theme-primary">{formatMins(todayEntertainmentMs)}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-b border-theme-border/50 pb-1.5">
+                    <span className="text-theme-secondary flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-violet-500 rounded-full" />
+                      Longest Run
+                    </span>
+                    <span className="font-mono font-bold text-theme-primary">{formatMins(longestSessionMs)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-theme-secondary flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+                      Focus Streak
+                    </span>
+                    <span className="font-mono font-bold text-amber-500">{streakDays} days</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-theme-border pt-4 mt-4 flex items-center justify-between text-[10px] text-theme-muted uppercase font-mono font-bold">
+                <span>Recovery Assistant</span>
+                <span className="text-emerald-500">Active</span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Quick Actions (3 cols) */}
+        <div className="lg:col-span-3 bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 className="text-base font-bold text-theme-primary mb-3">Quick Navigation</h3>
+            <div className="grid grid-cols-2 gap-2">
               <button 
                 onClick={() => onNavigate('tasks')}
-                className="flex flex-col items-start text-left p-4 rounded-xl border border-theme-border hover:bg-theme-bg transition-colors cursor-pointer group"
+                className="flex flex-col items-start text-left p-2.5 rounded-xl border border-theme-border hover:bg-theme-bg transition-colors cursor-pointer group"
               >
-                <div className="p-2 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-lg group-hover:scale-110 transition-transform">
-                  <CheckCircle2 className="w-5 h-5" />
+                <div className="p-1.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-lg group-hover:scale-105 transition-transform">
+                  <CheckCircle2 className="w-4 h-4" />
                 </div>
-                <span className="text-sm font-semibold text-theme-primary mt-3">Task Workspace</span>
-                <span className="text-xs text-theme-muted mt-1">Manage & organize board</span>
+                <span className="text-xs font-semibold text-theme-primary mt-2">Tasks</span>
               </button>
 
               <button 
                 onClick={() => onNavigate('ai')}
-                className="flex flex-col items-start text-left p-4 rounded-xl border border-theme-border hover:bg-theme-bg transition-colors cursor-pointer group"
+                className="flex flex-col items-start text-left p-2.5 rounded-xl border border-theme-border hover:bg-theme-bg transition-colors cursor-pointer group"
               >
-                <div className="p-2 bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 rounded-lg group-hover:scale-110 transition-transform">
-                  <Sparkles className="w-5 h-5" />
+                <div className="p-1.5 bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 rounded-lg group-hover:scale-105 transition-transform">
+                  <Sparkles className="w-4 h-4" />
                 </div>
-                <span className="text-sm font-semibold text-theme-primary mt-3">AI Assistant</span>
-                <span className="text-xs text-theme-muted mt-1">Breakdown & schedule chat</span>
+                <span className="text-xs font-semibold text-theme-primary mt-2">AI Help</span>
               </button>
 
               <button 
                 onClick={() => onNavigate('calendar')}
-                className="flex flex-col items-start text-left p-4 rounded-xl border border-theme-border hover:bg-theme-bg transition-colors cursor-pointer group"
+                className="flex flex-col items-start text-left p-2.5 rounded-xl border border-theme-border hover:bg-theme-bg transition-colors cursor-pointer group"
               >
-                <div className="p-2 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-lg group-hover:scale-110 transition-transform">
-                  <Calendar className="w-5 h-5" />
+                <div className="p-1.5 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-lg group-hover:scale-105 transition-transform">
+                  <Calendar className="w-4 h-4" />
                 </div>
-                <span className="text-sm font-semibold text-theme-primary mt-3">Calendar</span>
-                <span className="text-xs text-theme-muted mt-1">Weekly & monthly views</span>
+                <span className="text-xs font-semibold text-theme-primary mt-2">Calendar</span>
               </button>
 
               <button 
                 onClick={() => onNavigate('analytics')}
-                className="flex flex-col items-start text-left p-4 rounded-xl border border-theme-border hover:bg-theme-bg transition-colors cursor-pointer group"
+                className="flex flex-col items-start text-left p-2.5 rounded-xl border border-theme-border hover:bg-theme-bg transition-colors cursor-pointer group"
               >
-                <div className="p-2 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-lg group-hover:scale-110 transition-transform">
-                  <TrendingUp className="w-5 h-5" />
+                <div className="p-1.5 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-lg group-hover:scale-105 transition-transform">
+                  <TrendingUp className="w-4 h-4" />
                 </div>
-                <span className="text-sm font-semibold text-theme-primary mt-3">Analytics</span>
-                <span className="text-xs text-theme-muted mt-1">Productivity metrics</span>
+                <span className="text-xs font-semibold text-theme-primary mt-2">Metrics</span>
               </button>
             </div>
           </div>
 
           {/* Render typeset motivational quote */}
-          <div className="mt-6 pt-4 border-t border-theme-border flex items-start gap-3 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 dark:from-indigo-500/10 dark:to-purple-500/10 p-3 rounded-xl border border-indigo-500/10">
-            <span className="text-xl text-indigo-500 font-serif leading-none shrink-0">“</span>
-            <div className="space-y-1">
-              <p className="text-xs italic text-theme-secondary font-sans leading-relaxed">
+          <div className="mt-4 pt-3.5 border-t border-theme-border flex items-start gap-2 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 dark:from-indigo-500/10 dark:to-purple-500/10 p-2.5 rounded-xl border border-indigo-500/10">
+            <span className="text-lg text-indigo-500 font-serif leading-none shrink-0">“</span>
+            <div className="space-y-0.5">
+              <p className="text-[10px] italic text-theme-secondary font-sans leading-relaxed line-clamp-2">
                 {quote.text || "Your future is created by what you do today, not tomorrow."}
-              </p>
-              <p className="text-[10px] text-theme-muted font-semibold font-mono">
-                — {quote.author || "Robert Kiyosaki"}
               </p>
             </div>
           </div>
@@ -402,9 +643,20 @@ export default function Dashboard({
                     </div>
                   </div>
 
-                  <span className="text-xs font-mono font-bold text-theme-secondary shrink-0">
-                    {task.progress}%
-                  </span>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-xs font-mono font-bold text-theme-secondary">
+                      {task.progress}%
+                    </span>
+                    {onStartFocusSession && (
+                      <button
+                        onClick={() => onStartFocusSession(task)}
+                        title="Start Focus Session"
+                        className="p-1.5 rounded-lg border border-indigo-500/10 text-indigo-500 hover:text-white hover:bg-indigo-600 dark:border-indigo-500/20 dark:text-indigo-400 dark:hover:text-white transition-colors cursor-pointer"
+                      >
+                        <Play className="w-3 h-3 fill-current" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -472,7 +724,8 @@ export default function Dashboard({
         </div>
 
       </div>
-        </>
+          </>
+        )
       ) : (
         /* MISSION CONTROL DASHBOARD */
         <div className="space-y-6">

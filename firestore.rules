@@ -1,0 +1,105 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global safety net (Default Deny everything)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 2. Users entity
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      
+      // Allow profile updates for user metrics or details
+      allow update: if isOwner(userId) && isValidUser(incoming()) && (
+        incoming().createdAt == existing().createdAt && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'email', 'avatar', 'role', 'weeklyGoal', 'completedCount'])
+        )
+      );
+
+      // Tasks subcollection
+      match /tasks/{taskId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidTask(incoming()) && incoming().createdAt == request.time;
+        allow update: if isOwner(userId) && isValidTask(incoming()) && (
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time && (
+            incoming().diff(existing()).affectedKeys().hasAny(['title', 'description', 'priority', 'deadline', 'category', 'progress', 'status', 'estimatedDuration', 'updatedAt'])
+          )
+        );
+        allow delete: if isOwner(userId);
+      }
+
+      // Focus sessions subcollection
+      match /focusSessions/{sessionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidFocusSession(incoming()) && incoming().createdAt == request.time;
+        // Focus sessions are immutable (no updates/deletions allowed)
+      }
+    }
+
+    // Validation helper getters
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Data validations
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email', 'avatar', 'role', 'weeklyGoal', 'completedCount', 'createdAt'])
+        && data.keys().size() == 7
+        && data.name is string && data.name.size() <= 100
+        && data.email is string && data.email.size() <= 100
+        && data.avatar is string && data.avatar.size() <= 500
+        && data.role is string && data.role.size() <= 100
+        && data.weeklyGoal is int && data.weeklyGoal >= 0
+        && data.completedCount is int && data.completedCount >= 0;
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['title', 'description', 'priority', 'deadline', 'category', 'progress', 'status', 'estimatedDuration', 'createdAt', 'updatedAt'])
+        && data.keys().size() == 10
+        && data.title is string && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 1000
+        && data.priority is string && data.priority.size() <= 50
+        && data.deadline is string && data.deadline.size() <= 50
+        && data.category is string && data.category.size() <= 100
+        && (data.progress is int || data.progress is float || data.progress is number) && data.progress >= 0 && data.progress <= 100
+        && data.status is string && data.status.size() <= 50
+        && data.estimatedDuration is string && data.estimatedDuration.size() <= 50;
+    }
+
+    function isValidFocusSession(data) {
+      return data.keys().hasAll(['taskId', 'taskTitle', 'startTime', 'endTime', 'focusedTime', 'interruptionCount', 'totalInterruptedTime', 'longestInterruption', 'focusEfficiency', 'interruptions', 'createdAt'])
+        && data.keys().size() == 11
+        && data.taskId is string && data.taskId.size() <= 128
+        && data.taskTitle is string && data.taskTitle.size() <= 200
+        && (data.startTime is int || data.startTime is float || data.startTime is number) && data.startTime >= 0
+        && (data.endTime is int || data.endTime is float || data.endTime is number) && data.endTime >= 0
+        && (data.focusedTime is int || data.focusedTime is float || data.focusedTime is number) && data.focusedTime >= 0
+        && (data.interruptionCount is int || data.interruptionCount is float || data.interruptionCount is number) && data.interruptionCount >= 0
+        && (data.totalInterruptedTime is int || data.totalInterruptedTime is float || data.totalInterruptedTime is number) && data.totalInterruptedTime >= 0
+        && (data.longestInterruption is int || data.longestInterruption is float || data.longestInterruption is number) && data.longestInterruption >= 0
+        && (data.focusEfficiency is int || data.focusEfficiency is float || data.focusEfficiency is number) && data.focusEfficiency >= 0 && data.focusEfficiency <= 100
+        && data.interruptions is list && data.interruptions.size() <= 100;
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "collections": {
+    "users": {
+      "schema": {
+        "name": "string",
+        "email": "string",
+        "avatar": "string",
+        "role": "string",
+        "createdAt": "timestamp"
+      },
+      "rules": {
+        "read": "request.auth != null && request.auth.uid == userId",
+        "write": "request.auth != null && request.auth.uid == userId"
+      },
+      "subcollections": {
+        "tasks": {
+          "schema": {
+            "title": "string",
+            "description": "string",
+            "priority": "string",
+            "deadline": "string",
+            "category": "string",
+            "progress": "number",
+            "status": "string",
+            "estimatedDuration": "string",
+            "createdAt": "timestamp",
+            "updatedAt": "timestamp"
+          },
+          "rules": {
+            "read": "request.auth != null && request.auth.uid == userId",
+            "write": "request.auth != null && request.auth.uid == userId"
+          }
+        },
+        "focusSessions": {
+          "schema": {
+            "taskId": "string",
+            "taskTitle": "string",
+            "startTime": "number",
+            "endTime": "number",
+            "focusedTime": "number",
+            "interruptionCount": "number",
+            "totalInterruptedTime": "number",
+            "longestInterruption": "number",
+            "focusEfficiency": "number",
+            "interruptions": "array",
+            "createdAt": "timestamp"
+          },
+          "rules": {
+            "read": "request.auth != null && request.auth.uid == userId",
+            "write": "request.auth != null && request.auth.uid == userId"
+          }
+        }
+      }
+    }
+  }
+}

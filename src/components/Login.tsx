@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Shield, Sparkles, LogIn, Mail, Lock, CheckCircle2, ArrowRight } from 'lucide-react';
 import { UserProfile } from '../types';
+import { signInWithGoogle, signInAsGuest } from '../lib/firebase';
 
 interface LoginProps {
   onLogin: (profile: UserProfile) => void;
@@ -12,20 +13,47 @@ export default function Login({ onLogin, isDark }: LoginProps) {
   const [email, setEmail] = useState('demo@deadlineguardian.ai');
   const [password, setPassword] = useState('••••••••');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleGuestLogin = () => {
+  const handleGuestLogin = async () => {
     setLoading(true);
-    setTimeout(() => {
-      onLogin({
-        name: 'Krish Shah',
-        email: 'krishshah062021@gmail.com',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
-        role: 'Product Lead',
-        weeklyGoal: 10,
-        completedCount: 6,
-      });
+    setError(null);
+    try {
+      console.log('[Login Component] Quick Access Demo Mode selected. Attempting Firebase Anonymous Sign-In...');
+      const profile = await signInAsGuest();
+      console.log('[Login Component] Anonymous Sign-In succeeded, profile loaded:', profile);
+      onLogin(profile);
+    } catch (err: any) {
+      console.error('[Login Component] Failed to authenticate anonymously:', err);
+      setError(`Guest Login failed. Details: ${err.message || err.toString()}`);
+    } finally {
       setLoading(false);
-    }, 800);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const profile = await signInWithGoogle();
+      onLogin(profile);
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+        console.warn('Google login popup closed or cancelled by user:', err);
+      } else {
+        console.error('Google login error:', err);
+      }
+
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('Sign-In popup closed or blocked. Because this preview runs in a sandboxed iframe, your browser or extension might have blocked the popup. To sign in securely, please open the application in a new tab using the icon in the top right, or allow popups and cookies for this site.');
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        setError('Only one sign-in popup can be opened at a time.');
+      } else {
+        setError(err.message || 'Failed to authenticate with Google.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const features = [
@@ -52,7 +80,11 @@ export default function Login({ onLogin, isDark }: LoginProps) {
               <div className="p-2.5 bg-indigo-600 rounded-xl text-white">
                 <Shield className="w-6 h-6 stroke-[1.5]" />
               </div>
-              <span className="text-xl font-bold font-sans tracking-tight bg-gradient-to-r from-slate-900 to-indigo-900 dark:from-white dark:to-indigo-200 bg-clip-text text-transparent">
+              <span className={`text-xl font-bold font-sans tracking-tight ${
+                isDark 
+                  ? 'text-white' 
+                  : 'bg-gradient-to-r from-slate-900 to-indigo-900 bg-clip-text text-transparent'
+              }`}>
                 Deadline Guardian AI
               </span>
             </div>
@@ -107,6 +139,12 @@ export default function Login({ onLogin, isDark }: LoginProps) {
             <h3 className="text-xl font-bold text-theme-primary">Welcome Back</h3>
             <p className="text-xs text-theme-muted mt-1">Access your guardian dashboard to start tracking</p>
           </div>
+
+          {error && (
+            <div className="mb-4 p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-500 font-medium leading-normal">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={(e) => { e.preventDefault(); handleGuestLogin(); }} className="space-y-4">
             <div>
@@ -176,9 +214,10 @@ export default function Login({ onLogin, isDark }: LoginProps) {
           {/* Social Sign-In */}
           <div className="space-y-3">
             <button
-              onClick={handleGuestLogin}
+              onClick={handleGoogleLogin}
+              disabled={loading}
               type="button"
-              className="w-full flex items-center justify-center gap-2 py-2.5 border rounded-xl text-xs font-semibold cursor-pointer active:scale-[0.98] transition-all border-theme-border bg-theme-bg hover:bg-theme-card text-theme-primary"
+              className="w-full flex items-center justify-center gap-2 py-2.5 border rounded-xl text-xs font-semibold cursor-pointer active:scale-[0.98] transition-all border-theme-border bg-theme-bg hover:bg-theme-card text-theme-primary disabled:opacity-50"
             >
               <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
                 <g transform="matrix(1, 0, 0, 1, 0, 0)">
@@ -193,8 +232,9 @@ export default function Login({ onLogin, isDark }: LoginProps) {
 
             <button
               onClick={handleGuestLogin}
+              disabled={loading}
               type="button"
-              className="w-full flex items-center justify-center gap-1 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 py-2.5 rounded-xl text-xs font-semibold active:scale-[0.98] transition-all cursor-pointer"
+              className="w-full flex items-center justify-center gap-1 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 py-2.5 rounded-xl text-xs font-semibold active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
             >
               <span>Quick Access Demo Mode</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />

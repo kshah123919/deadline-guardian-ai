@@ -26,9 +26,31 @@ export interface Message {
 
 export interface Activity {
   id: string;
-  type: 'create' | 'complete' | 'edit' | 'delete' | 'ai_chat';
+  type: 'create' | 'complete' | 'edit' | 'delete' | 'ai_chat' | 'focus';
   content: string;
   timestamp: string; // Relative time (e.g., "5m ago")
+}
+
+export interface FocusInterruption {
+  startTime: number;
+  returnTime: number;
+  duration: number;
+  eventType: 'visibilitychange' | 'blur' | 'focus';
+  category?: string;
+}
+
+export interface FocusSession {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  startTime: number;
+  endTime: number;
+  focusedTime: number; // in ms
+  interruptionCount: number;
+  totalInterruptedTime: number; // in ms
+  longestInterruption: number; // in ms
+  focusEfficiency: number; // 0 to 100
+  interruptions: FocusInterruption[];
 }
 
 export interface UserProfile {

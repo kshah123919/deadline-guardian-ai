@@ -1,16 +1,17 @@
 import { motion } from 'motion/react';
 import { 
   TrendingUp, CheckCircle2, AlertCircle, Clock, Calendar, 
-  Award, BarChart2, PieChart, ShieldAlert, Sparkles 
+  Award, BarChart2, PieChart, ShieldAlert, Sparkles, Brain, Zap, Activity
 } from 'lucide-react';
-import { Task } from '../types';
+import { Task, FocusSession } from '../types';
 
 interface AnalyticsProps {
   tasks: Task[];
   isDark: boolean;
+  focusSessions?: FocusSession[];
 }
 
-export default function Analytics({ tasks, isDark }: AnalyticsProps) {
+export default function Analytics({ tasks, isDark, focusSessions = [] }: AnalyticsProps) {
   // 1. Calculations
   const completedTasks = tasks.filter(t => t.status === 'completed');
   const pendingTasks = tasks.filter(t => t.status !== 'completed');
@@ -24,12 +25,35 @@ export default function Analytics({ tasks, isDark }: AnalyticsProps) {
   const weeklyCompletionRate = Math.round((completedCount / Math.max(1, totalTasks)) * 100);
 
   // Dynamic Productivity Score out of 100
-  // Formula: (Completion % * 0.6) + (High Priority Completion % * 0.4)
+  // Calculated using completed tasks, pending tasks, overdue tasks, progress percentages, high-priority completion, and deadline performance
+  const overdueTasks = tasks.filter(t => t.status !== 'completed' && new Date(t.deadline).getTime() < Date.now());
   const highPriority = tasks.filter(t => t.priority === 'high');
   const highCompleted = highPriority.filter(t => t.status === 'completed');
-  const highRatio = highPriority.length > 0 ? (highCompleted.length / highPriority.length) : 1;
-  const rawScore = (weeklyCompletionRate * 0.6) + (highRatio * 40);
-  const productivityScore = Math.max(0, Math.min(100, Math.round(rawScore)));
+  
+  const completionRate = totalTasks > 0 ? (completedCount / totalTasks) : 0;
+  const highPriorityRatio = highPriority.length > 0 ? (highCompleted.length / highPriority.length) : 1;
+  const averageProgress = totalTasks > 0 ? (tasks.reduce((sum, t) => sum + t.progress, 0) / totalTasks) : 0;
+  
+  // Deadline performance: Ratio of non-overdue tasks to total pending tasks
+  const deadlinePerformance = pendingTasks.length > 0 
+    ? (1 - (overdueTasks.length / pendingTasks.length)) 
+    : 1;
+
+  // Combine components into a precise 100-point dynamic scale:
+  // - 40% completion rate
+  // - 20% high priority ratio
+  // - 20% average progress
+  // - 20% deadline performance (lack of overdue tasks)
+  const calculatedScore = totalTasks > 0
+    ? Math.round(
+        (completionRate * 40) + 
+        (highPriorityRatio * 20) + 
+        ((averageProgress / 100) * 20) + 
+        (deadlinePerformance * 20)
+      )
+    : 0;
+
+  const productivityScore = Math.max(0, Math.min(100, calculatedScore));
 
   // 2. Priority Breakdowns
   const highCount = tasks.filter(t => t.priority === 'high').length;
@@ -43,13 +67,20 @@ export default function Analytics({ tasks, isDark }: AnalyticsProps) {
   });
   const categoriesList = Object.entries(categoryCounts).map(([name, val]) => ({ name, val }));
 
-  // 4. Mock 7-Day Completion Velocity (Custom SVG line graph)
-  // Maps days of week to task completed numbers (e.g. [Mon: 1, Tue: 3, Wed: 2, Thu: 4, Fri: 2, Sat: 0, Sun: 1])
+  // 4. Dynamic 7-Day Completion Velocity (Custom SVG line graph)
   const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const mockWeeklyCompleted = [1, 2, 0, 4, 2, 1, 3]; // Mock historical points
-  // Add today's actual live completed tasks count into the weekday slot representing "today"
-  const todayIndex = (new Date().getDay() + 6) % 7; // Convert 0 (Sun)-6 (Sat) to 0 (Mon)-6 (Sun)
-  mockWeeklyCompleted[todayIndex] = Math.max(mockWeeklyCompleted[todayIndex], completedCount);
+  const mockWeeklyCompleted = [0, 0, 0, 0, 0, 0, 0];
+  completedTasks.forEach(task => {
+    try {
+      const date = new Date(task.deadline);
+      if (!isNaN(date.getTime())) {
+        const dayOfWeek = (date.getDay() + 6) % 7; // Convert 0 (Sun)-6 (Sat) to 0 (Mon)-6 (Sun)
+        mockWeeklyCompleted[dayOfWeek]++;
+      }
+    } catch (e) {
+      // Ignore invalid date
+    }
+  });
 
   // SVG parameters for chart drawing
   const chartHeight = 160;
@@ -82,6 +113,19 @@ export default function Analytics({ tasks, isDark }: AnalyticsProps) {
           Historical trends, completion ratios, and dynamic priority allocations.
         </p>
       </div>
+
+      {totalTasks === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 border border-dashed border-theme-border rounded-2xl text-center max-w-xl mx-auto bg-theme-card/30 p-8">
+          <div className="p-4 bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-500 rounded-full mb-4">
+            <BarChart2 className="w-10 h-10 animate-pulse" />
+          </div>
+          <h3 className="text-lg font-bold text-theme-primary">Analytics Empty</h3>
+          <p className="text-xs text-theme-secondary mt-2 leading-relaxed">
+            Create your first task to begin tracking productivity.
+          </p>
+        </div>
+      ) : (
+        <>
 
       {/* Grid of Key Numerical Widgets */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
@@ -340,6 +384,267 @@ export default function Analytics({ tasks, isDark }: AnalyticsProps) {
           </div>
         )}
       </div>
+
+      {/* Focus Interruption Tracker Analytics */}
+      <div className="bg-theme-card border border-theme-border p-6 rounded-2xl shadow-sm space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-theme-border pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-500 rounded-xl">
+              <Brain className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-theme-primary">Focus & Interruption Insights</h3>
+              <p className="text-xs text-theme-secondary mt-0.5">Understand your attention shielding and interruption metrics.</p>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono font-bold bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 px-2.5 py-1 rounded-lg uppercase tracking-wider">
+            Premium Focus Tracker
+          </span>
+        </div>
+
+        {focusSessions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-theme-border rounded-xl">
+            <Activity className="w-8 h-8 text-theme-muted mb-2 animate-pulse" />
+            <p className="text-sm font-semibold text-theme-primary">No Focus Sessions Logged</p>
+            <p className="text-xs text-theme-muted mt-1 max-w-xs">Start focus sessions on your Workspace tasks to unlock analytics.</p>
+          </div>
+        ) : (
+          <>
+            {(() => {
+              const formatFocusMs = (ms: number) => {
+                if (ms <= 0) return '0m';
+                const seconds = Math.floor(ms / 1000);
+                const minutes = Math.floor(seconds / 60);
+                if (minutes > 0) return `${minutes}m`;
+                return `${seconds}s`;
+              };
+
+              const totalFocusTimeMs = focusSessions.reduce((sum, s) => sum + s.focusedTime, 0);
+
+              let totalLearningMs = 0;
+              let totalCodingMs = 0;
+              let totalBreakMs = 0;
+              let totalEntertainmentMs = 0;
+              let totalMeetingsMs = 0;
+
+              focusSessions.forEach(s => {
+                (s.interruptions || []).forEach(inter => {
+                  const cat = inter.category;
+                  if (cat === 'learning' || cat === 'reading') {
+                    totalLearningMs += inter.duration;
+                  } else if (cat === 'coding') {
+                    totalCodingMs += inter.duration;
+                  } else if (cat === 'break' || cat === 'lunch') {
+                    totalBreakMs += inter.duration;
+                  } else if (cat === 'entertainment' || cat === 'gaming') {
+                    totalEntertainmentMs += inter.duration;
+                  } else if (cat === 'meeting') {
+                    totalMeetingsMs += inter.duration;
+                  }
+                });
+              });
+
+              const totalAwayMs = totalLearningMs + totalCodingMs + totalBreakMs + totalEntertainmentMs + totalMeetingsMs;
+
+              return (
+                <div className="space-y-6">
+                  {/* Category Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div className="p-4 rounded-xl border bg-theme-bg border-theme-border shadow-xs">
+                      <span className="text-[10px] font-mono text-theme-secondary uppercase font-bold tracking-wider block">Focus Time</span>
+                      <h4 className="text-xl font-extrabold text-indigo-500 mt-1">{formatFocusMs(totalFocusTimeMs)}</h4>
+                      <div className="w-full h-1.5 bg-indigo-500/10 rounded-full mt-2 overflow-hidden">
+                        <div className="h-full bg-indigo-500 rounded-full" style={{ width: '100%' }} />
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl border bg-theme-bg border-theme-border shadow-xs">
+                      <span className="text-[10px] font-mono text-theme-secondary uppercase font-bold tracking-wider block">Learning Time</span>
+                      <h4 className="text-xl font-extrabold text-emerald-500 mt-1">{formatFocusMs(totalLearningMs)}</h4>
+                      <div className="w-full h-1.5 bg-emerald-500/10 rounded-full mt-2 overflow-hidden">
+                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, totalAwayMs > 0 ? (totalLearningMs / totalAwayMs) * 100 : 0)}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl border bg-theme-bg border-theme-border shadow-xs">
+                      <span className="text-[10px] font-mono text-theme-secondary uppercase font-bold tracking-wider block">Coding Time</span>
+                      <h4 className="text-xl font-extrabold text-cyan-500 mt-1">{formatFocusMs(totalCodingMs)}</h4>
+                      <div className="w-full h-1.5 bg-cyan-500/10 rounded-full mt-2 overflow-hidden">
+                        <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${Math.min(100, totalAwayMs > 0 ? (totalCodingMs / totalAwayMs) * 100 : 0)}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl border bg-theme-bg border-theme-border shadow-xs">
+                      <span className="text-[10px] font-mono text-theme-secondary uppercase font-bold tracking-wider block">Break Time</span>
+                      <h4 className="text-xl font-extrabold text-amber-500 mt-1">{formatFocusMs(totalBreakMs)}</h4>
+                      <div className="w-full h-1.5 bg-amber-500/10 rounded-full mt-2 overflow-hidden">
+                        <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, totalAwayMs > 0 ? (totalBreakMs / totalAwayMs) * 100 : 0)}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl border bg-theme-bg border-theme-border shadow-xs">
+                      <span className="text-[10px] font-mono text-theme-secondary uppercase font-bold tracking-wider block">Entertainment</span>
+                      <h4 className="text-xl font-extrabold text-rose-500 mt-1">{formatFocusMs(totalEntertainmentMs)}</h4>
+                      <div className="w-full h-1.5 bg-rose-500/10 rounded-full mt-2 overflow-hidden">
+                        <div className="h-full bg-rose-500 rounded-full" style={{ width: `${Math.min(100, totalAwayMs > 0 ? (totalEntertainmentMs / totalAwayMs) * 100 : 0)}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl border bg-theme-bg border-theme-border shadow-xs">
+                      <span className="text-[10px] font-mono text-theme-secondary uppercase font-bold tracking-wider block">Meetings & Calls</span>
+                      <h4 className="text-xl font-extrabold text-violet-500 mt-1">{formatFocusMs(totalMeetingsMs)}</h4>
+                      <div className="w-full h-1.5 bg-violet-500/10 rounded-full mt-2 overflow-hidden">
+                        <div className="h-full bg-violet-500 rounded-full" style={{ width: `${Math.min(100, totalAwayMs > 0 ? (totalMeetingsMs / totalAwayMs) * 100 : 0)}%` }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Visual Charts and Recent Logs */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    {/* Focus Trend Card (7 cols) */}
+                    <div className="lg:col-span-7 p-5 border rounded-xl bg-theme-bg border-theme-border flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-xs font-mono font-bold uppercase text-theme-secondary tracking-wider mb-4 flex items-center gap-1.5">
+                          <TrendingUp className="w-4 h-4 text-indigo-500" />
+                          Focus Shield Efficiency Trend (%)
+                        </h4>
+
+                        <div className="w-full overflow-x-auto">
+                          <div className="min-w-[440px] h-[160px] relative">
+                            {(() => {
+                              const lastSeven = [...focusSessions].slice(0, 7).reverse();
+                              const focusChartHeight = 160;
+                              const focusPadding = 30;
+                              const focusGraphWidth = 440 - focusPadding * 2;
+                              const focusGraphHeight = focusChartHeight - focusPadding * 2;
+
+                              const points = lastSeven.map((s, i) => {
+                                const x = focusPadding + (i * focusGraphWidth) / Math.max(1, lastSeven.length - 1);
+                                const y = focusChartHeight - focusPadding - (s.focusEfficiency * focusGraphHeight) / 100;
+                                return `${x},${y}`;
+                              }).join(' ');
+
+                              const areaPoints = lastSeven.length > 0
+                                ? `${focusPadding},${focusChartHeight - focusPadding} ` + points + ` ${focusPadding + focusGraphWidth},${focusChartHeight - focusPadding}`
+                                : '';
+
+                              return (
+                                <svg className="w-full h-full">
+                                  <defs>
+                                    <linearGradient id="focusGrad" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.25" />
+                                      <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.0" />
+                                    </linearGradient>
+                                  </defs>
+
+                                  {/* Grid Lines */}
+                                  <line x1={focusPadding} y1={focusPadding} x2={focusPadding + focusGraphWidth} y2={focusPadding} className="stroke-theme-border/20" strokeWidth="1" />
+                                  <line x1={focusPadding} y1={focusPadding + focusGraphHeight / 2} x2={focusPadding + focusGraphWidth} y2={focusPadding + focusGraphHeight / 2} className="stroke-theme-border/10" strokeWidth="1" />
+                                  <line x1={focusPadding} y1={focusChartHeight - focusPadding} x2={focusPadding + focusGraphWidth} y2={focusChartHeight - focusPadding} className="stroke-theme-border/40" strokeWidth="1" />
+
+                                  {/* Left Y Axis Efficiency Labels */}
+                                  <text x={focusPadding - 8} y={focusPadding + 4} textAnchor="end" className="fill-theme-secondary font-mono text-[9px] font-bold">100%</text>
+                                  <text x={focusPadding - 8} y={focusPadding + focusGraphHeight / 2 + 4} textAnchor="end" className="fill-theme-secondary font-mono text-[9px] font-bold">50%</text>
+                                  <text x={focusPadding - 8} y={focusChartHeight - focusPadding + 4} textAnchor="end" className="fill-theme-secondary font-mono text-[9px] font-bold">0%</text>
+
+                                  {/* Filled Area */}
+                                  {lastSeven.length > 0 && (
+                                    <polygon points={areaPoints} fill="url(#focusGrad)" />
+                                  )}
+
+                                  {/* Line */}
+                                  {lastSeven.length > 0 && (
+                                    <polyline
+                                      fill="none"
+                                      stroke="#4f46e5"
+                                      strokeWidth="3"
+                                      points={points}
+                                      strokeLinecap="round"
+                                    />
+                                  )}
+
+                                  {/* Dots */}
+                                  {lastSeven.map((s, i) => {
+                                    const cx = focusPadding + (i * focusGraphWidth) / Math.max(1, lastSeven.length - 1);
+                                    const cy = focusChartHeight - focusPadding - (s.focusEfficiency * focusGraphHeight) / 100;
+                                    return (
+                                      <g key={s.id}>
+                                        <circle
+                                          cx={cx}
+                                          cy={cy}
+                                          r="4.5"
+                                          className="fill-indigo-500 stroke-white dark:stroke-slate-950"
+                                          strokeWidth="2"
+                                        />
+                                      </g>
+                                    );
+                                  })}
+
+                                  {/* X Axis Indexes */}
+                                  {lastSeven.map((s, i) => {
+                                    const x = focusPadding + (i * focusGraphWidth) / Math.max(1, lastSeven.length - 1);
+                                    return (
+                                      <text
+                                        key={s.id}
+                                        x={x}
+                                        y={focusChartHeight - 8}
+                                        textAnchor="middle"
+                                        className="fill-theme-secondary font-mono text-[8px] font-bold"
+                                      >
+                                        S{focusSessions.length - lastSeven.length + i + 1}
+                                      </text>
+                                    );
+                                  })}
+                                </svg>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Focus Logs (5 cols) */}
+                    <div className="lg:col-span-5 p-5 border rounded-xl bg-theme-bg border-theme-border flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-xs font-mono font-bold uppercase text-theme-secondary tracking-wider mb-3 flex items-center gap-1.5">
+                          <Zap className="w-4 h-4 text-indigo-500" />
+                          Recent Focus Sessions
+                        </h4>
+
+                        <div className="space-y-3">
+                          {[...focusSessions].slice(0, 3).map((session) => {
+                            const mins = Math.floor(session.focusedTime / 60000);
+                            const secs = Math.floor((session.focusedTime % 60000) / 1000);
+                            return (
+                              <div key={session.id} className="p-3 border rounded-lg bg-theme-card/60 border-theme-border flex flex-col justify-between gap-1">
+                                <div className="flex justify-between items-start gap-2">
+                                  <span className="text-xs font-bold text-theme-primary line-clamp-1">{session.taskTitle}</span>
+                                  <span className="text-[10px] font-mono bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 px-1.5 py-0.5 rounded font-bold">
+                                    {session.focusEfficiency}% Eff
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] text-theme-secondary mt-1">
+                                  <span>Time: {mins > 0 ? `${mins}m ${secs}s` : `${secs}s`}</span>
+                                  <span>{session.interruptionCount} interruption{session.interruptionCount !== 1 && 's'}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              );
+            })()}
+          </>
+        )}
+      </div>
+
+        </>
+      )}
 
     </div>
   );

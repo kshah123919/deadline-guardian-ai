@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { 
   User, Sun, Moon, Bell, Info, ShieldAlert, Check, 
-  RefreshCw, LogOut, Shield, Award, Mail, Briefcase, Activity as ActivityIcon
+  RefreshCw, LogOut, Shield, Award, Mail, Briefcase, Activity as ActivityIcon, Brain
 } from 'lucide-react';
 import { UserProfile, Activity } from '../types';
 
@@ -13,6 +13,8 @@ interface SettingsProps {
   isDark: boolean;
   onToggleTheme: () => void;
   onLogout: () => void;
+  focusReminderMode: 'silent' | 'gentle' | 'bell' | 'voice';
+  onUpdateFocusReminderMode: (mode: 'silent' | 'gentle' | 'bell' | 'voice') => void;
 }
 
 export default function Settings({
@@ -21,7 +23,9 @@ export default function Settings({
   activities,
   isDark,
   onToggleTheme,
-  onLogout
+  onLogout,
+  focusReminderMode,
+  onUpdateFocusReminderMode
 }: SettingsProps) {
   // Local profile states
   const [name, setName] = useState(profile.name);
@@ -99,6 +103,44 @@ export default function Settings({
                   } inline-block h-5 w-5 transform rounded-full shadow-md transition-transform duration-200`}
                 />
               </button>
+            </div>
+          </div>
+
+          {/* Focus Recovery Assistant Settings Card */}
+          <div className="bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm">
+            <h3 className="text-base font-bold text-theme-primary mb-4 flex items-center gap-2">
+              <Brain className="w-5 h-5 text-indigo-500" />
+              <span>Focus Recovery Assistant</span>
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono font-medium text-theme-secondary uppercase tracking-wider mb-2.5">
+                  Focus Reminder Mode
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {(['silent', 'gentle', 'bell', 'voice'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => onUpdateFocusReminderMode(mode)}
+                      className={`px-3 py-2.5 rounded-xl border text-xs font-bold text-center capitalize transition-all cursor-pointer ${
+                        focusReminderMode === mode
+                          ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/15'
+                          : 'bg-theme-bg border-theme-border text-theme-secondary hover:text-theme-primary hover:border-indigo-500/30'
+                      }`}
+                    >
+                      {mode === 'silent' && '🔇 Silent'}
+                      {mode === 'gentle' && '🎵 Gentle Bell'}
+                      {mode === 'bell' && '🔔 Loud Bell'}
+                      {mode === 'voice' && '🗣 Voice'}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-theme-muted mt-2.5 leading-relaxed">
+                  Controls the sound cue triggered when returning from an away interruption. Voice reminders utilize standard local Speech Synthesis.
+                </p>
+              </div>
             </div>
           </div>
 
