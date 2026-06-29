@@ -26,7 +26,7 @@ export interface Message {
 
 export interface Activity {
   id: string;
-  type: 'create' | 'complete' | 'edit' | 'delete' | 'ai_chat' | 'focus';
+  type: 'create' | 'complete' | 'edit' | 'delete' | 'ai_chat' | 'focus' | 'rescue';
   content: string;
   timestamp: string; // Relative time (e.g., "5m ago")
 }
@@ -60,4 +60,13 @@ export interface UserProfile {
   role: string;
   weeklyGoal: number; // number of tasks to complete
   completedCount: number;
+  themePreference?: 'light' | 'dark';
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  startTime: string;
+  endTime: string;
+  category?: string;
 }

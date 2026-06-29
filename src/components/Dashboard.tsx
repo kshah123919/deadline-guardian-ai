@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { 
   CheckCircle2, Circle, AlertTriangle, Play, Calendar, 
   TrendingUp, Sparkles, Plus, ChevronRight, Activity as ActivityIcon, Clock, Award,
-  LayoutDashboard, Loader2, ShieldAlert
+  LayoutDashboard, Loader2, ShieldAlert, ArrowRight
 } from 'lucide-react';
 import { Task, Activity, UserProfile, FocusSession } from '../types';
 import { MOTIVATIONAL_QUOTES } from '../utils/mockData';
@@ -194,6 +194,61 @@ export default function Dashboard({
           <span>New Task</span>
         </button>
       </div>
+
+      {(() => {
+        const incomplete = tasks.filter(t => t.status !== 'completed');
+        const totalHours = incomplete.reduce((sum, t) => {
+          if (!t.estimatedDuration) return sum + 1.5;
+          const cleaned = t.estimatedDuration.toLowerCase().trim();
+          const hMatch = cleaned.match(/(\d+)\s*h/);
+          const mMatch = cleaned.match(/(\d+)\s*m/);
+          let total = 0;
+          if (hMatch) total += parseInt(hMatch[1]);
+          if (mMatch) total += parseInt(mMatch[1]) / 60;
+          return sum + (total > 0 ? total : 1.5);
+        }, 0);
+
+        if (totalHours > 8) {
+          return (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-gradient-to-r from-rose-500/15 via-indigo-500/10 to-rose-500/10 border border-rose-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-rose-500 text-white rounded-xl animate-pulse">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-mono font-black uppercase bg-rose-500 text-white px-1.5 py-0.5 rounded tracking-widest">
+                      Guardian Alert
+                    </span>
+                    <span className="text-xs text-rose-500 font-bold animate-pulse">
+                      CRITICAL OVERLOAD DETECTED
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-extrabold text-theme-primary mt-1.5">
+                    Current required workload is {totalHours.toFixed(1)} hours.
+                  </h3>
+                  <p className="text-xs text-theme-secondary mt-1">
+                    Your estimated execution time exceeds safe thresholds. We prepared a recovery strategy to protect your deadlines.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => onNavigate('rescue')}
+                className="flex items-center gap-1.5 px-4.5 py-2.5 bg-rose-500 text-white rounded-xl text-xs font-bold shadow-md hover:bg-rose-600 transition-all cursor-pointer whitespace-nowrap"
+              >
+                <span>Run Rescue Plan</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </motion.div>
+          );
+        }
+        return null;
+      })()}
 
       {/* Segmented Controller for Dashboard Modes */}
       <div className="flex items-center p-1.5 bg-theme-card border border-theme-border rounded-2xl w-full sm:w-fit gap-1">

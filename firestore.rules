@@ -51,6 +51,19 @@ service cloud.firestore {
         allow create: if isOwner(userId) && isValidFocusSession(incoming()) && incoming().createdAt == request.time;
         // Focus sessions are immutable (no updates/deletions allowed)
       }
+
+      // Rescue plans subcollection
+      match /rescuePlans/{planId} {
+        allow get, list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidRescuePlan(incoming()) && incoming().updatedAt == request.time;
+        allow delete: if isOwner(userId);
+      }
+
+      // Calendar events subcollection
+      match /calendarEvents/{eventId} {
+        allow get, list: if isOwner(userId);
+        allow create, update, delete: if isOwner(userId);
+      }
     }
 
     // Validation helper getters
@@ -100,6 +113,19 @@ service cloud.firestore {
         && (data.longestInterruption is int || data.longestInterruption is float || data.longestInterruption is number) && data.longestInterruption >= 0
         && (data.focusEfficiency is int || data.focusEfficiency is float || data.focusEfficiency is number) && data.focusEfficiency >= 0 && data.focusEfficiency <= 100
         && data.interruptions is list && data.interruptions.size() <= 100;
+    }
+
+    function isValidRescuePlan(data) {
+      return data.keys().hasAll(['id', 'originalTasks', 'optimizedSchedule', 'appliedChanges', 'metrics', 'timestamp', 'isApplied', 'reasons', 'updatedAt'])
+        && data.keys().size() == 9
+        && data.id is string && data.id.size() <= 128
+        && data.originalTasks is list && data.originalTasks.size() <= 100
+        && data.optimizedSchedule is list && data.optimizedSchedule.size() <= 100
+        && data.appliedChanges is list && data.appliedChanges.size() <= 100
+        && data.metrics is map
+        && data.timestamp is string && data.timestamp.size() <= 100
+        && data.isApplied is bool
+        && data.reasons is list && data.reasons.size() <= 100;
     }
   }
 }

@@ -22,7 +22,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { UserProfile, Task, FocusSession } from '../types';
+import { UserProfile, Task, FocusSession, CalendarEvent } from '../types';
 
 // 1. Initialize Firebase App
 console.log('[Firebase Init] Initializing Firebase with config:', {
@@ -119,17 +119,20 @@ export async function syncUserToFirestore(user: FirebaseUser): Promise<UserProfi
         avatar: data.avatar || user.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
         role: data.role || 'Engineer',
         weeklyGoal: data.weeklyGoal || 10,
-        completedCount: data.completedCount || 0
+        completedCount: data.completedCount || 0,
+        themePreference: data.themePreference || 'light'
       };
     } else {
       // User doesn't exist, create profile doc
+      const localTheme = localStorage.getItem('themePreference') as 'light' | 'dark' | null;
       const newProfile: UserProfile = {
         name: user.displayName || (user.isAnonymous ? 'Demo Guest' : 'Guardian User'),
         email: user.email || (user.isAnonymous ? 'guest@deadlineguardian.ai' : ''),
         avatar: user.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
         role: 'Engineer', // default role
         weeklyGoal: 10,
-        completedCount: 0
+        completedCount: 0,
+        themePreference: localTheme || 'light'
       };
 
       console.log(`[Firestore Write] Profile not found. Creating user profile document at: ${path}`, newProfile);
@@ -140,6 +143,7 @@ export async function syncUserToFirestore(user: FirebaseUser): Promise<UserProfi
         role: newProfile.role,
         weeklyGoal: newProfile.weeklyGoal,
         completedCount: newProfile.completedCount,
+        themePreference: newProfile.themePreference,
         createdAt: serverTimestamp()
       });
       console.log(`[Firestore Write] Successfully created user profile document for UID: ${user.uid}`);
@@ -258,6 +262,82 @@ export async function getTasksFromFirestore(userId: string): Promise<Task[]> {
   } catch (error: any) {
     console.error(`[Firestore Error] Failed to process retrieved tasks for UID: ${userId}:`, error);
     throw error;
+  }
+}
+
+/**
+ * Retrieve all calendar events for a specific user from Firestore.
+ */
+export async function getCalendarEventsFromFirestore(userId: string): Promise<CalendarEvent[]> {
+  const eventsRef = collection(db, 'users', userId, 'calendarEvents');
+  const path = `users/${userId}/calendarEvents`;
+  
+  let querySnapshot;
+  try {
+    console.log(`[Firestore Read] Retrieving all calendar events for user UID: ${userId}`);
+    querySnapshot = await getDocs(eventsRef);
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.LIST, path);
+  }
+
+  try {
+    const events: CalendarEvent[] = [];
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      events.push({
+        id: docSnap.id,
+        title: data.title || '',
+        startTime: data.startTime || '',
+        endTime: data.endTime || '',
+        category: data.category || ''
+      });
+    });
+    console.log(`[Firestore Read] Successfully fetched ${events.length} calendar events for UID: ${userId}`);
+    return events;
+  } catch (error: any) {
+    console.error(`[Firestore Error] Failed to process retrieved calendar events for UID: ${userId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Add a new calendar event to a user's collection in Firestore.
+ */
+export async function addCalendarEventToFirestore(userId: string, event: Omit<CalendarEvent, 'id'>): Promise<string> {
+  const eventsRef = collection(db, 'users', userId, 'calendarEvents');
+  const newDocRef = doc(eventsRef);
+  const docId = newDocRef.id;
+  const path = `users/${userId}/calendarEvents/${docId}`;
+
+  try {
+    console.log(`[Firestore Write] Writing calendar event "${event.title}" to path: ${path}`, event);
+    await setDoc(newDocRef, {
+      title: event.title,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      category: event.category || '',
+      createdAt: serverTimestamp()
+    });
+    console.log(`[Firestore Write] Successfully wrote calendar event "${event.title}" to Firestore (ID: ${docId}).`);
+    return docId;
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+}
+
+/**
+ * Delete a calendar event from a user's collection in Firestore.
+ */
+export async function deleteCalendarEventFromFirestore(userId: string, eventId: string): Promise<void> {
+  const eventRef = doc(db, 'users', userId, 'calendarEvents', eventId);
+  const path = `users/${userId}/calendarEvents/${eventId}`;
+
+  try {
+    console.log(`[Firestore Write] Deleting calendar event ID: ${eventId} from path: ${path}`);
+    await deleteDoc(eventRef);
+    console.log(`[Firestore Write] Successfully deleted calendar event ID: ${eventId} from Firestore.`);
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.DELETE, path);
   }
 }
 
@@ -405,6 +485,116 @@ export async function getFocusSessionsFromFirestore(userId: string): Promise<Foc
   } catch (error: any) {
     console.error(`[Firestore Error] Failed to process retrieved focus sessions for UID: ${userId}:`, error);
     throw error;
+  }
+}
+
+/**
+ * Update a user's profile fields in Firestore.
+ */
+export async function updateUserProfileInFirestore(userId: string, updatedFields: Partial<UserProfile>): Promise<void> {
+  const userRef = doc(db, 'users', userId);
+  const path = `users/${userId}`;
+  try {
+    console.log(`[Firestore Write] Updating user profile at: ${path}`, updatedFields);
+    await updateDoc(userRef, updatedFields as Record<string, any>);
+    console.log(`[Firestore Write] Successfully updated user profile at: ${path}`);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+/**
+ * Save a generated Guardian Rescue Plan to Firestore.
+ */
+export async function saveRescuePlanToFirestore(userId: string, plan: {
+  id: string;
+  originalTasks: Task[];
+  optimizedSchedule: any[];
+  appliedChanges: any[];
+  metrics: any;
+  timestamp: string;
+  isApplied: boolean;
+  reasons: string[];
+}): Promise<void> {
+  const planRef = doc(db, 'users', userId, 'rescuePlans', plan.id);
+  const latestRef = doc(db, 'users', userId, 'rescuePlans', 'latest');
+  const path = `users/${userId}/rescuePlans/${plan.id}`;
+  try {
+    console.log(`[Firestore Write] Saving rescue plan to path: ${path}`, plan);
+    const docData = {
+      id: plan.id,
+      originalTasks: plan.originalTasks,
+      optimizedSchedule: plan.optimizedSchedule,
+      appliedChanges: plan.appliedChanges,
+      metrics: plan.metrics,
+      timestamp: plan.timestamp,
+      isApplied: plan.isApplied,
+      reasons: plan.reasons,
+      updatedAt: serverTimestamp()
+    };
+    await setDoc(planRef, docData);
+    await setDoc(latestRef, docData);
+    console.log(`[Firestore Write] Successfully saved latest rescue plan and history in Firestore.`);
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+}
+
+/**
+ * Retrieve the latest Guardian Rescue Plan from Firestore.
+ */
+export async function getLatestRescuePlanFromFirestore(userId: string): Promise<any | null> {
+  const planRef = doc(db, 'users', userId, 'rescuePlans', 'latest');
+  const path = `users/${userId}/rescuePlans/latest`;
+  try {
+    console.log(`[Firestore Read] Reading latest rescue plan for UID: ${userId}`);
+    const docSnap = await getDoc(planRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+    return null;
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.GET, path);
+  }
+}
+
+/**
+ * Retrieve all Guardian Rescue Plans from Firestore history.
+ */
+export async function getRescuePlansHistoryFromFirestore(userId: string): Promise<any[]> {
+  const plansColl = collection(db, 'users', userId, 'rescuePlans');
+  const path = `users/${userId}/rescuePlans`;
+  try {
+    const querySnapshot = await getDocs(plansColl);
+    const plans: any[] = [];
+    querySnapshot.forEach((doc) => {
+      if (doc.id !== 'latest') {
+        plans.push(doc.data());
+      }
+    });
+    // Sort client-side safely to avoid Firestore index errors
+    plans.sort((a, b) => {
+      const timeA = a.updatedAt?.seconds ? a.updatedAt.seconds * 1000 : new Date(a.timestamp || 0).getTime();
+      const timeB = b.updatedAt?.seconds ? b.updatedAt.seconds * 1000 : new Date(b.timestamp || 0).getTime();
+      return timeB - timeA;
+    });
+    return plans;
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.LIST, path);
+  }
+}
+
+/**
+ * Delete the latest Guardian Rescue Plan from Firestore.
+ */
+export async function deleteRescuePlanFromFirestore(userId: string): Promise<void> {
+  const planRef = doc(db, 'users', userId, 'rescuePlans', 'latest');
+  const path = `users/${userId}/rescuePlans/latest`;
+  try {
+    console.log(`[Firestore Write] Deleting latest rescue plan for UID: ${userId}`);
+    await deleteDoc(planRef);
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.DELETE, path);
   }
 }
 

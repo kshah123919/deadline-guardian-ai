@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Shield, LayoutDashboard, ListTodo, Calendar as CalendarIcon, 
-  Sparkles, LineChart, Settings as SettingsIcon, LogOut, Sun, Moon, Sparkle, Award
+  Sparkles, LineChart, Settings as SettingsIcon, LogOut, Sun, Moon, Sparkle, Award,
+  ShieldAlert
 } from 'lucide-react';
 
-import { Task, Message, Activity, UserProfile, FocusSession } from './types';
+import { Task, Message, Activity, UserProfile, FocusSession, CalendarEvent } from './types';
 import { onAuthStateChanged } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
 import { 
   auth, 
   syncUserToFirestore, 
@@ -16,7 +18,13 @@ import {
   updateTaskInFirestore,
   deleteTaskFromFirestore,
   addFocusSessionToFirestore,
-  getFocusSessionsFromFirestore
+  getFocusSessionsFromFirestore,
+  updateUserProfileInFirestore,
+  saveRescuePlanToFirestore,
+  getLatestRescuePlanFromFirestore,
+  deleteRescuePlanFromFirestore,
+  getCalendarEventsFromFirestore,
+  db
 } from './lib/firebase';
 
 // Screens
@@ -29,6 +37,7 @@ import AIAssistant from './components/AIAssistant';
 import Analytics from './components/Analytics';
 import Settings from './components/Settings';
 import FocusSessionMode from './components/FocusSessionMode';
+import GuardianRescue from './components/GuardianRescue';
 
 export default function App() {
   // 1. Initial Core States
@@ -36,7 +45,13 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return sessionStorage.getItem('is_guest') === 'true';
   });
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('themePreference');
+    if (saved) {
+      return saved === 'dark';
+    }
+    return false; // brand-new user: default to false (Light Mode)
+  });
   const [activeTab, setActiveTab] = useState('dashboard');
   
   // 2. Data State
@@ -67,6 +82,8 @@ export default function App() {
   const [focusReminderMode, setFocusReminderMode] = useState<'silent' | 'gentle' | 'bell' | 'voice'>(() => {
     return (localStorage.getItem('focusReminderMode') as 'silent' | 'gentle' | 'bell' | 'voice') || 'gentle';
   });
+  const [activeRescuePlan, setActiveRescuePlan] = useState<any | null>(null);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
 
   const handleUpdateFocusReminderMode = (mode: 'silent' | 'gentle' | 'bell' | 'voice') => {
     setFocusReminderMode(mode);
@@ -80,6 +97,38 @@ export default function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+  }, [isDarkMode]);
+
+  const handleToggleTheme = async () => {
+    const nextDark = !isDarkMode;
+    setIsDarkMode(nextDark);
+    const themeVal = nextDark ? 'dark' : 'light';
+    localStorage.setItem('themePreference', themeVal);
+    
+    // Update local profile state
+    setProfile(prev => ({ ...prev, themePreference: themeVal }));
+    
+    // Update Firebase if logged in
+    const firebaseUser = auth.currentUser;
+    if (firebaseUser) {
+      try {
+        await updateUserProfileInFirestore(firebaseUser.uid, { themePreference: themeVal });
+      } catch (err) {
+        console.error('[App Firestore Error] Failed to persist theme preference:', err);
+      }
+    }
+  };
+
+  // Keyboard shortcut listener for theme toggle (Ctrl + T)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        handleToggleTheme();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isDarkMode]);
 
   // AI Welcome Message helper
@@ -102,6 +151,17 @@ export default function App() {
           const syncedProfile = await syncUserToFirestore(firebaseUser);
           setProfile(syncedProfile);
           
+          // Restore theme preference immediately
+          if (syncedProfile.themePreference) {
+            const isProfileDark = syncedProfile.themePreference === 'dark';
+            setIsDarkMode(isProfileDark);
+            localStorage.setItem('themePreference', syncedProfile.themePreference);
+          } else {
+            // Write local theme to new user if not set in cloud
+            const localTheme = localStorage.getItem('themePreference') || 'light';
+            await updateUserProfileInFirestore(firebaseUser.uid, { themePreference: localTheme as 'light' | 'dark' });
+          }
+          
           // Retrieve tasks directly from Firestore
           console.log(`[App Firestore Operation] READING tasks from Firestore for user ${firebaseUser.uid}...`);
           let dbTasks = await getTasksFromFirestore(firebaseUser.uid);
@@ -114,6 +174,32 @@ export default function App() {
           let dbSessions = await getFocusSessionsFromFirestore(firebaseUser.uid);
           console.log(`[App Firestore Operation] Successfully READ ${dbSessions.length} focus sessions from Firestore.`);
           setFocusSessions(dbSessions);
+
+          // Retrieve active rescue plan directly from Firestore
+          try {
+            console.log(`[App Firestore Operation] READING rescue plan from Firestore for user ${firebaseUser.uid}...`);
+            let latestPlan = await getLatestRescuePlanFromFirestore(firebaseUser.uid);
+            if (latestPlan) {
+              console.log("[App Firestore Operation] Successfully loaded active rescue plan.");
+              setActiveRescuePlan(latestPlan);
+            } else {
+              setActiveRescuePlan(null);
+            }
+          } catch (planErr) {
+            console.error("[App Firestore Operation] Failed to load latest rescue plan:", planErr);
+            setActiveRescuePlan(null);
+          }
+
+          // Retrieve calendar events directly from Firestore
+          try {
+            console.log(`[App Firestore Operation] READING calendar events from Firestore for user ${firebaseUser.uid}...`);
+            let dbEvents = await getCalendarEventsFromFirestore(firebaseUser.uid);
+            console.log(`[App Firestore Operation] Successfully READ ${dbEvents.length} calendar events from Firestore.`);
+            setCalendarEvents(dbEvents);
+          } catch (calErr) {
+            console.error("[App Firestore Operation] Failed to load calendar events:", calErr);
+            setCalendarEvents([]);
+          }
 
           setMessages([getAIWelcomeMessage(syncedProfile.name)]);
           setActivities([
@@ -248,6 +334,98 @@ export default function App() {
     }
   };
 
+  const handleApplyRescuePlan = async (
+    updatedTasks: Task[], 
+    appliedChanges: any[], 
+    metrics: any,
+    optimizedSchedule: any[] = [],
+    reasons: string[] = []
+  ) => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) return;
+    
+    try {
+      // 1. Snapshot original tasks list before plan
+      const originalTasksSnapshot = [...tasks];
+      
+      // 2. Persist the plan metadata to Firestore
+      const rescuePlanData = {
+        id: `rescue-${Date.now()}`,
+        originalTasks: originalTasksSnapshot,
+        optimizedSchedule,
+        appliedChanges,
+        metrics,
+        timestamp: new Date().toISOString(),
+        isApplied: true,
+        reasons
+      };
+      
+      await saveRescuePlanToFirestore(firebaseUser.uid, rescuePlanData);
+      setActiveRescuePlan(rescuePlanData);
+
+      // 3. Apply changes (update deadlines of modified tasks) in Firestore
+      for (const change of appliedChanges) {
+        await updateTaskInFirestore(firebaseUser.uid, change.taskId, { deadline: change.newDeadline });
+      }
+
+      // 4. Fetch and update local tasks list
+      const dbTasks = await getTasksFromFirestore(firebaseUser.uid);
+      setTasks(dbTasks);
+
+      // 5. Add custom activities logs
+      addActivityLog('rescue', "Guardian detected overload");
+      addActivityLog('rescue', "Recovery plan accepted");
+      addActivityLog('rescue', "Tasks reordered");
+      addActivityLog('rescue', "Focus blocks created");
+      addActivityLog('rescue', "Calendar optimized");
+    } catch (err: any) {
+      console.error("Failed to apply Rescue Plan:", err);
+      setError(`Failed to apply Rescue Plan: ${err.message || err.toString()}`);
+      throw err;
+    }
+  };
+
+  const handleUndoRescuePlan = async () => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser || !activeRescuePlan) return;
+
+    try {
+      // 1. Restore each task's original deadline
+      const originalTasks = activeRescuePlan.originalTasks as Task[];
+      for (const originalTask of originalTasks) {
+        const currentTask = tasks.find(t => t.id === originalTask.id);
+        if (currentTask && currentTask.deadline !== originalTask.deadline) {
+          await updateTaskInFirestore(firebaseUser.uid, originalTask.id, { deadline: originalTask.deadline });
+        }
+      }
+
+      // 2. Mark historical plan as unapplied, then delete latest pointer from Firestore
+      const planId = activeRescuePlan.id;
+      if (planId && planId !== 'latest') {
+        try {
+          const planHistoryRef = doc(db, 'users', firebaseUser.uid, 'rescuePlans', planId);
+          await updateDoc(planHistoryRef, { isApplied: false });
+        } catch (dbErr) {
+          console.warn("Failed to mark historical plan as isApplied=false, but proceeding:", dbErr);
+        }
+      }
+
+      await deleteRescuePlanFromFirestore(firebaseUser.uid);
+      setActiveRescuePlan(null);
+
+      // 3. Fetch and update local tasks list
+      const dbTasks = await getTasksFromFirestore(firebaseUser.uid);
+      setTasks(dbTasks);
+
+      addActivityLog('rescue', "Recovery plan rolled back");
+      addActivityLog('rescue', "Original schedule restored");
+    } catch (err: any) {
+      console.error("Failed to undo Rescue Plan:", err);
+      setError(`Failed to undo Rescue Plan: ${err.message || err.toString()}`);
+      throw err;
+    }
+  };
+
   const handleToggleTaskStatus = (id: string) => {
     const task = tasks.find(t => t.id === id);
     if (task) {
@@ -332,9 +510,18 @@ export default function App() {
   };
 
   // 7. Profile Updates
-  const handleUpdateProfile = (updated: Partial<UserProfile>) => {
+  const handleUpdateProfile = async (updated: Partial<UserProfile>) => {
     setProfile(prev => ({ ...prev, ...updated }));
     addActivityLog('edit', 'Updated security user profile settings');
+    
+    const firebaseUser = auth.currentUser;
+    if (firebaseUser) {
+      try {
+        await updateUserProfileInFirestore(firebaseUser.uid, updated);
+      } catch (err) {
+        console.error('[App Firestore Error] Failed to update user profile:', err);
+      }
+    }
   };
 
   const handleLogout = async () => {
@@ -354,6 +541,7 @@ export default function App() {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'tasks', label: 'Workspace', icon: ListTodo },
     { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
+    { id: 'rescue', label: 'Guardian Rescue', icon: ShieldAlert },
     { id: 'ai', label: 'AI Assistant', icon: Sparkles },
     { id: 'analytics', label: 'Analytics', icon: LineChart },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
@@ -401,6 +589,18 @@ export default function App() {
             onNavigateToTasks={() => setActiveTab('tasks')}
           />
         );
+      case 'rescue':
+        return (
+          <GuardianRescue
+            tasks={tasks}
+            calendarEvents={calendarEvents}
+            isDark={isDarkMode}
+            onApplyPlan={handleApplyRescuePlan}
+            onUndoPlan={handleUndoRescuePlan}
+            activeRescuePlan={activeRescuePlan}
+            addActivityLog={addActivityLog}
+          />
+        );
       case 'ai':
         return (
           <AIAssistant
@@ -422,7 +622,7 @@ export default function App() {
             onUpdateProfile={handleUpdateProfile}
             activities={activities}
             isDark={isDarkMode}
-            onToggleTheme={() => setIsDarkMode(!isDarkMode)}
+            onToggleTheme={handleToggleTheme}
             onLogout={handleLogout}
             focusReminderMode={focusReminderMode}
             onUpdateFocusReminderMode={handleUpdateFocusReminderMode}
@@ -435,7 +635,7 @@ export default function App() {
 
   // RENDER SEQUENCES
   if (!isSplashComplete || authInitializing) {
-    return <Splash onComplete={() => setIsSplashComplete(true)} />;
+    return <Splash onComplete={() => setIsSplashComplete(true)} isDark={isDarkMode} />;
   }
 
   if (!isLoggedIn) {
@@ -508,7 +708,7 @@ export default function App() {
         <div className="space-y-4 pt-4 border-t border-theme-border">
           {/* Quick theme toggler in sidebar */}
           <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
+            onClick={handleToggleTheme}
             className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors hover:bg-theme-bg text-theme-secondary hover:text-theme-primary"
           >
             <div className="flex items-center gap-2">

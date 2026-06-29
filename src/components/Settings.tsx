@@ -56,6 +56,7 @@ export default function Settings({
       case 'complete': return 'bg-emerald-500 text-white';
       case 'create': return 'bg-indigo-500 text-white';
       case 'ai_chat': return 'bg-violet-500 text-white';
+      case 'rescue': return 'bg-amber-500 text-white';
       default: return 'bg-slate-400 text-white';
     }
   };

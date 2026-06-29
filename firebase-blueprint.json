@@ -49,6 +49,23 @@
             "read": "request.auth != null && request.auth.uid == userId",
             "write": "request.auth != null && request.auth.uid == userId"
           }
+        },
+        "rescuePlans": {
+          "schema": {
+            "id": "string",
+            "originalTasks": "array",
+            "optimizedSchedule": "array",
+            "appliedChanges": "array",
+            "metrics": "object",
+            "timestamp": "string",
+            "isApplied": "boolean",
+            "reasons": "array",
+            "updatedAt": "timestamp"
+          },
+          "rules": {
+            "read": "request.auth != null && request.auth.uid == userId",
+            "write": "request.auth != null && request.auth.uid == userId"
+          }
         }
       }
     }
