@@ -204,7 +204,7 @@ export default function App() {
           setMessages([getAIWelcomeMessage(syncedProfile.name)]);
           setActivities([
             {
-              id: `act-${Date.now()}`,
+              id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
               type: 'ai_chat',
               content: `Synchronized session for ${syncedProfile.name}`,
               timestamp: 'Just now'
@@ -235,7 +235,7 @@ export default function App() {
   // 4. Activity Logger Helper
   const addActivityLog = (type: Activity['type'], content: string) => {
     const newLog: Activity = {
-      id: `act-${Date.now()}`,
+      id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       type,
       content,
       timestamp: 'Just now',

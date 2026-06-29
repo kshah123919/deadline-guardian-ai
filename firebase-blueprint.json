@@ -66,6 +66,18 @@
             "read": "request.auth != null && request.auth.uid == userId",
             "write": "request.auth != null && request.auth.uid == userId"
           }
+        },
+        "calendarEvents": {
+          "schema": {
+            "title": "string",
+            "startTime": "string",
+            "endTime": "string",
+            "category": "string"
+          },
+          "rules": {
+            "read": "request.auth != null && request.auth.uid == userId",
+            "write": "request.auth != null && request.auth.uid == userId"
+          }
         }
       }
     }
