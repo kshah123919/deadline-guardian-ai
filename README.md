@@ -311,13 +311,13 @@ VITE_FIREBASE_APP_ID=your_app_id
 
 ## 📸 Screenshots
 
-| Section | Screen Mockup / Placeholder | Description |
-| :--- | :--- | :--- |
-| **Mission Control Dashboard** | `[ 💻 Dashboard View Placeholder ]` | Includes Live Productive Score, Workload Meter, and Pending Tasks. |
-| **Guardian Rescue Workspace** | `[ 🛡️ Guardian Rescue Comparison Tool ]` | Displays side-by-side Before/After schedule shifts with specific reasons. |
-| **Gemini Coach Chat** | `[ 🧠 AI Assistant Chat Portal ]` | Real-time workspace advisor fed with active Firestore collections. |
-| **Immersive Focus Workspace** | `[ ⏱️ Deep Focus Interface ]` | Fullscreen focus mode displaying real-time telemetry and distraction metrics. |
-| **Advanced Data Analytics** | `[ 📊 Recharts Performance Graphs ]` | Dynamic charts reflecting workload changes, focus sessions, and completion velocities. |
+| Section | Description |
+| :--- | :--- |
+| **Mission Control Dashboard** | Includes Live Productive Score, Workload Meter, and Pending Tasks. |
+| **Guardian Rescue Workspace** | Displays side-by-side Before/After schedule shifts with specific reasons. |
+| **Gemini Coach Chat** | Real-time workspace advisor fed with active Firestore collections. |
+| **Immersive Focus Workspace** | Fullscreen focus mode displaying real-time telemetry and distraction metrics. |
+| **Advanced Data Analytics** | Dynamic charts reflecting workload changes, focus sessions, and completion velocities. |
 
 ---
 
