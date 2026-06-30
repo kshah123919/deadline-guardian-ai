@@ -49,7 +49,7 @@ service cloud.firestore {
       match /focusSessions/{sessionId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId) && isValidFocusSession(incoming()) && incoming().createdAt == request.time;
-        // Focus sessions are immutable (no updates/deletions allowed)
+        allow delete: if isOwner(userId);
       }
 
       // Rescue plans subcollection

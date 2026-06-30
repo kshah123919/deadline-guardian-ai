@@ -20,6 +20,133 @@ interface DashboardProps {
   onStartFocusSession?: (task: Task) => void;
 }
 
+const formatTimeRange = (timeSlot: string): string => {
+  if (!timeSlot) return timeSlot;
+  
+  const match = timeSlot.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+  if (!match) return timeSlot;
+  
+  const formatTimeStr = (hourStr: string, minStr: string) => {
+    let hour = parseInt(hourStr, 10);
+    const min = minStr;
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12;
+    if (hour === 0) hour = 12;
+    return `${hour}:${min} ${ampm}`;
+  };
+  
+  const startStr = formatTimeStr(match[1], match[2]);
+  const endStr = formatTimeStr(match[3], match[4]);
+  
+  return `${startStr} – ${endStr}`;
+};
+
+const cleanAndFormatISOInText = (text: string): string => {
+  if (!text) return text;
+  
+  if (/^\s*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?\s*$/gi.test(text.trim())) {
+    try {
+      const date = new Date(text.trim());
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const absoluteDiffMs = Math.abs(diffMs);
+      const diffMins = Math.floor(absoluteDiffMs / (1000 * 60));
+      if (diffMins < 60) {
+        return `Updated ${diffMins} minutes ago`;
+      }
+      const timeOptions: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+      const formattedTime = date.toLocaleTimeString([], timeOptions);
+      return `Updated Today • ${formattedTime}`;
+    } catch (e) {}
+  }
+  
+  const regex = /(updated\s+(?:on|at)\s*|generated\s+(?:on|at)\s*|passed\s+(?:on|at)\s*|on\s*|\n)?(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)/gi;
+  
+  return text.replace(regex, (match, prefix, isoStr) => {
+    try {
+      const date = new Date(isoStr);
+      if (isNaN(date.getTime())) return match;
+      
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const absoluteDiffMs = Math.abs(diffMs);
+      const isPast = diffMs > 0;
+      
+      const diffMins = Math.floor(absoluteDiffMs / (1000 * 60));
+      const diffHrs = Math.floor(absoluteDiffMs / (1000 * 60 * 60));
+      const remainingMins = Math.floor((absoluteDiffMs % (1000 * 60 * 60)) / (1000 * 60));
+      
+      const timeOptions: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+      const formattedTime = date.toLocaleTimeString([], timeOptions);
+      
+      const dateOptions: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+      const formattedDate = date.toLocaleDateString([], dateOptions);
+      
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      const isYesterday = date.getDate() === yesterday.getDate() &&
+                          date.getMonth() === yesterday.getMonth() &&
+                          date.getFullYear() === yesterday.getFullYear();
+
+      let timePart = '';
+      if (isPast) {
+        if (diffHrs < 24) {
+          if (diffHrs === 0) {
+            timePart = `${diffMins} minutes ago`;
+          } else {
+            timePart = `${diffHrs}h ${remainingMins}m ago`;
+          }
+        } else if (isYesterday) {
+          timePart = `Yesterday at ${formattedTime}`;
+        } else {
+          timePart = `${formattedDate} • ${formattedTime}`;
+        }
+      } else {
+        if (diffHrs < 24) {
+          if (diffHrs === 0) {
+            timePart = `in ${diffMins} minutes`;
+          } else {
+            timePart = `in ${diffHrs}h ${remainingMins}m`;
+          }
+        } else {
+          timePart = `${formattedDate} • ${formattedTime}`;
+        }
+      }
+
+      if (prefix) {
+        const lowerPrefix = prefix.toLowerCase();
+        if (lowerPrefix.includes('updated')) {
+          if (diffMins < 60) {
+            return `Updated ${diffMins} minutes ago`;
+          }
+          return `Updated Today • ${formattedTime}`;
+        }
+        if (lowerPrefix.includes('generated')) {
+          if (diffMins < 60) {
+            return `Generated ${diffMins} minutes ago`;
+          }
+          return `Generated Today • ${formattedTime}`;
+        }
+        if (lowerPrefix.includes('passed')) {
+          let passedTime = timePart;
+          if (diffHrs < 24) {
+            if (diffHrs === 0) {
+              passedTime = `${diffMins}m ago`;
+            } else {
+              passedTime = `${diffHrs}h ${remainingMins}m ago`;
+            }
+          }
+          return `passed ${passedTime}`;
+        }
+      }
+      
+      return timePart;
+    } catch (e) {
+      return match;
+    }
+  });
+};
+
 export default function Dashboard({
   tasks,
   activities,
@@ -921,7 +1048,7 @@ export default function Dashboard({
                 </div>
 
                 <div className="text-sm text-theme-primary leading-relaxed space-y-2 whitespace-pre-wrap font-sans">
-                  {renderMarkdown(analysis.dailyBriefing)}
+                  {renderMarkdown(cleanAndFormatISOInText(analysis.dailyBriefing))}
                 </div>
               </div>
 
@@ -1036,23 +1163,23 @@ export default function Dashboard({
                           return (
                             <div 
                               key={index} 
-                              className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 border rounded-xl gap-2 transition-all ${
+                              className={`flex flex-row items-center justify-between p-3.5 border rounded-xl gap-2 transition-all min-w-0 ${
                                 block.isTask 
                                   ? 'bg-indigo-500/5 border-indigo-500/20 hover:border-indigo-500/40' 
                                   : 'bg-theme-bg/40 border-theme-border border-dashed'
                               }`}
                             >
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
                                 <span className="text-xs font-mono font-bold text-indigo-500 dark:text-indigo-400 shrink-0 bg-indigo-500/10 dark:bg-indigo-500/25 px-2.5 py-1 rounded-lg">
-                                  {block.timeSlot}
+                                  {formatTimeRange(block.timeSlot)}
                                 </span>
-                                <div className="overflow-hidden">
+                                <div className="min-w-0 flex-1">
                                   <h4 className="text-xs font-bold text-theme-primary truncate">{block.activity}</h4>
                                   <p className="text-[10px] text-theme-secondary mt-0.5 font-mono">{block.durationMinutes} minutes</p>
                                 </div>
                               </div>
 
-                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded font-mono w-fit uppercase ${
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded font-mono uppercase shrink-0 ${
                                 block.isTask 
                                   ? 'bg-indigo-600 text-white' 
                                   : 'bg-theme-border text-theme-secondary'
@@ -1107,7 +1234,7 @@ export default function Dashboard({
                           </div>
 
                           <p className="text-xs text-theme-secondary line-clamp-3 leading-relaxed mb-4">
-                            {risk.reason}
+                            {cleanAndFormatISOInText(risk.reason)}
                           </p>
                         </div>
 

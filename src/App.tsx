@@ -119,17 +119,7 @@ export default function App() {
     }
   };
 
-  // Keyboard shortcut listener for theme toggle (Ctrl + T)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't') {
-        e.preventDefault();
-        handleToggleTheme();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isDarkMode]);
+
 
   // AI Welcome Message helper
   const getAIWelcomeMessage = (name: string): Message => ({
@@ -709,15 +699,10 @@ export default function App() {
           {/* Quick theme toggler in sidebar */}
           <button
             onClick={handleToggleTheme}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors hover:bg-theme-bg text-theme-secondary hover:text-theme-primary"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors hover:bg-theme-bg text-theme-secondary hover:text-theme-primary"
           >
-            <div className="flex items-center gap-2">
-              {isDarkMode ? <Moon className="w-4 h-4 text-indigo-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
-              <span>{isDarkMode ? 'Twilight Mode' : 'Daylight Mode'}</span>
-            </div>
-            <span className="text-[9px] font-mono font-bold bg-theme-bg border border-theme-border px-1.5 py-0.5 rounded text-theme-muted">
-              Ctrl+T
-            </span>
+            {isDarkMode ? <Moon className="w-4 h-4 text-indigo-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
+            <span>{isDarkMode ? 'Twilight Mode' : 'Daylight Mode'}</span>
           </button>
 
           <button
@@ -731,7 +716,7 @@ export default function App() {
       </aside>
 
       {/* 2. FLOATING BOTTOM NAVIGATION - MOBILE ONLY */}
-      <nav className="md:hidden fixed bottom-4 left-4 right-4 z-40 flex items-center justify-around p-2.5 rounded-2xl border backdrop-blur-xl shadow-2xl transition-all bg-theme-card/95 border-theme-border text-theme-primary">
+      <nav className="md:hidden fixed bottom-4 left-2 right-2 min-[360px]:left-3 min-[360px]:right-3 min-[390px]:left-4 min-[390px]:right-4 z-40 flex items-center justify-between p-1 min-[360px]:p-1.5 min-[390px]:p-2 rounded-2xl border backdrop-blur-xl shadow-2xl transition-all bg-theme-card/95 border-theme-border text-theme-primary">
         {navigationItems.map((item) => {
           const IconComponent = item.icon;
           const isActive = activeTab === item.id;
@@ -739,18 +724,20 @@ export default function App() {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all relative cursor-pointer ${
+              className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all relative cursor-pointer ${
                 isActive 
                   ? 'text-indigo-600 dark:text-indigo-400' 
                   : 'text-theme-secondary'
               }`}
             >
-              <IconComponent className="w-5 h-5" />
-              <span className="text-[9px] font-bold mt-1 font-sans">{item.label.split(' ')[0]}</span>
+              <IconComponent className="w-4 h-4 min-[360px]:w-4.5 min-[360px]:h-4.5 min-[390px]:w-5 min-[390px]:h-5 shrink-0" />
+              <span className="text-[8px] min-[340px]:text-[9px] min-[375px]:text-[10px] min-[412px]:text-[11px] font-bold mt-1 font-sans text-center leading-none truncate max-w-full block px-0.5">
+                {item.label.split(' ')[0]}
+              </span>
               {isActive && (
                 <motion.div
                   layoutId="activeTabIndicator"
-                  className="absolute -bottom-1 w-1.5 h-1.5 bg-indigo-600 dark:bg-indigo-400 rounded-full"
+                  className="absolute -bottom-0.5 w-1 h-1 min-[360px]:w-1.5 min-[360px]:h-1.5 bg-indigo-600 dark:bg-indigo-400 rounded-full"
                 />
               )}
             </button>

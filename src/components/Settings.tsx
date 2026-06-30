@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { 
-  User, Sun, Moon, Bell, Info, ShieldAlert, Check, 
-  RefreshCw, LogOut, Shield, Award, Mail, Briefcase, Activity as ActivityIcon, Brain
+  User, Sun, Moon, Info, Check, LogOut, Shield, Award, Mail, Briefcase, Activity as ActivityIcon, Brain
 } from 'lucide-react';
 import { UserProfile, Activity } from '../types';
 
@@ -34,10 +33,7 @@ export default function Settings({
   const [goal, setGoal] = useState(profile.weeklyGoal);
   const [savedStatus, setSavedStatus] = useState(false);
 
-  // Notifications toggles
-  const [pushNotifs, setPushNotifs] = useState(true);
-  const [emailNotifs, setEmailNotifs] = useState(false);
-  const [aiDigest, setAiDigest] = useState(true);
+
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,54 +237,7 @@ export default function Settings({
             </form>
           </div>
 
-          {/* Notifications Preferences */}
-          <div className="bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm">
-            <h3 className="text-base font-bold text-theme-primary mb-4 flex items-center gap-2">
-              <Bell className="w-5 h-5 text-indigo-500" />
-              <span>Deadline Alerts & Briefings</span>
-            </h3>
 
-            <div className="space-y-4">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={pushNotifs}
-                  onChange={(e) => setPushNotifs(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 accent-indigo-500"
-                />
-                <div>
-                  <span className="text-sm font-semibold text-theme-primary">Push Deadline Reminders</span>
-                  <p className="text-xs text-theme-muted mt-0.5">Push soundless desktop alerts 1 hour before a deadline threshold collapses.</p>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={emailNotifs}
-                  onChange={(e) => setEmailNotifs(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 accent-indigo-500"
-                />
-                <div>
-                  <span className="text-sm font-semibold text-theme-primary">Weekly Email Performance Digests</span>
-                  <p className="text-xs text-theme-muted mt-0.5">Receive a PDF summary mapping weekly velocity trends and pending roadmap targets.</p>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={aiDigest}
-                  onChange={(e) => setAiDigest(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 accent-indigo-500"
-                />
-                <div>
-                  <span className="text-sm font-semibold text-theme-primary">AI Workspace Briefings</span>
-                  <p className="text-xs text-theme-muted mt-0.5">Let the companion formulate a customized morning sprint plan inside the chatbot.</p>
-                </div>
-              </label>
-            </div>
-          </div>
 
         </div>
 

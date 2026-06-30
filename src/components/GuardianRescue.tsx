@@ -663,6 +663,35 @@ export default function GuardianRescue({
     }
   };
 
+  const getStatusBadgeSeparated = (status: string) => {
+    let emoji = '🟢';
+    let label = 'Balanced';
+    switch (status) {
+      case 'impossible':
+        emoji = '🔴';
+        label = 'Impossible';
+        break;
+      case 'overloaded':
+        emoji = '🟠';
+        label = 'Overloaded';
+        break;
+      case 'busy':
+        emoji = '🟡';
+        label = 'Busy';
+        break;
+      default:
+        emoji = '🟢';
+        label = 'Balanced';
+        break;
+    }
+    return (
+      <div className="flex flex-col items-center justify-center space-y-0.5">
+        <span className="text-sm sm:text-base leading-none">{emoji}</span>
+        <span className="text-xs sm:text-sm font-black tracking-tight leading-none">{label}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 pb-12">
       {/* Header section */}
@@ -1043,35 +1072,45 @@ export default function GuardianRescue({
                     <h4 className="text-xs font-black text-theme-primary uppercase tracking-wider font-mono">🛡️ Guardian Summary</h4>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                    <div className="bg-theme-bg/60 border border-theme-border rounded-xl p-3 flex flex-col justify-between h-[72px] min-w-0">
-                      <span className="text-[10px] font-mono text-theme-muted uppercase font-bold tracking-wider truncate">Focus Blocks</span>
-                      <p className="text-base font-black text-indigo-500 truncate">
+                    <div className="bg-theme-bg/60 border border-theme-border rounded-xl p-3 flex flex-col justify-center items-center text-center min-h-24 min-w-0 shadow-sm hover:border-indigo-500/30 transition-all">
+                      <span className="text-[10px] font-mono text-theme-muted uppercase font-bold tracking-wider leading-tight">
+                        Focus<br />Blocks
+                      </span>
+                      <p className="text-base font-black text-indigo-500 mt-1.5">
                         {optimizedPlan.metrics.after.focusBlocksCreatedCount}
                       </p>
                     </div>
-                    <div className="bg-theme-bg/60 border border-theme-border rounded-xl p-3 flex flex-col justify-between h-[72px] min-w-0">
-                      <span className="text-[10px] font-mono text-theme-muted uppercase font-bold tracking-wider truncate">Conflicts Removed</span>
-                      <p className="text-base font-black text-indigo-500 truncate">
+                    <div className="bg-theme-bg/60 border border-theme-border rounded-xl p-3 flex flex-col justify-center items-center text-center min-h-24 min-w-0 shadow-sm hover:border-indigo-500/30 transition-all">
+                      <span className="text-[10px] font-mono text-theme-muted uppercase font-bold tracking-wider leading-tight">
+                        Conflicts<br />Removed
+                      </span>
+                      <p className="text-base font-black text-indigo-500 mt-1.5">
                         {optimizedPlan.metrics.before.conflictsCount}
                       </p>
                     </div>
-                    <div className="bg-theme-bg/60 border border-theme-border rounded-xl p-3 flex flex-col justify-between h-[72px] min-w-0">
-                      <span className="text-[10px] font-mono text-theme-muted uppercase font-bold tracking-wider truncate">Tasks Deferred</span>
-                      <p className="text-base font-black text-amber-500 truncate">
+                    <div className="bg-theme-bg/60 border border-theme-border rounded-xl p-3 flex flex-col justify-center items-center text-center min-h-24 min-w-0 shadow-sm hover:border-indigo-500/30 transition-all">
+                      <span className="text-[10px] font-mono text-theme-muted uppercase font-bold tracking-wider leading-tight">
+                        Tasks<br />Deferred
+                      </span>
+                      <p className="text-base font-black text-amber-500 mt-1.5">
                         {optimizedPlan.appliedChanges.length}
                       </p>
                     </div>
-                    <div className="bg-theme-bg/60 border border-theme-border rounded-xl p-3 flex flex-col justify-between h-[72px] min-w-0">
-                      <span className="text-[10px] font-mono text-theme-muted uppercase font-bold tracking-wider truncate">Buffer Added</span>
-                      <p className="text-base font-black text-emerald-500 truncate">
+                    <div className="bg-theme-bg/60 border border-theme-border rounded-xl p-3 flex flex-col justify-center items-center text-center min-h-24 min-w-0 shadow-sm hover:border-indigo-500/30 transition-all">
+                      <span className="text-[10px] font-mono text-theme-muted uppercase font-bold tracking-wider leading-tight">
+                        Buffer<br />Added
+                      </span>
+                      <p className="text-base font-black text-emerald-500 mt-1.5">
                         {optimizedPlan.metrics.after.bufferAddedMinutes} min
                       </p>
                     </div>
-                    <div className="bg-theme-bg/60 border border-theme-border rounded-xl p-3 flex flex-col justify-between h-[72px] min-w-0">
-                      <span className="text-[10px] font-mono text-theme-muted uppercase font-bold tracking-wider truncate">Status</span>
-                      <p className={`text-xs sm:text-sm font-black truncate ${getStatusColorClass(optimizedPlan.metrics.after.status)}`}>
-                        {getStatusBadge(optimizedPlan.metrics.after.status)}
-                      </p>
+                    <div className="bg-theme-bg/60 border border-theme-border rounded-xl p-3 flex flex-col justify-center items-center text-center min-h-24 min-w-0 shadow-sm hover:border-indigo-500/30 transition-all">
+                      <span className="text-[10px] font-mono text-theme-muted uppercase font-bold tracking-wider leading-tight">
+                        Status
+                      </span>
+                      <div className={`mt-1.5 font-black ${getStatusColorClass(optimizedPlan.metrics.after.status)}`}>
+                        {getStatusBadgeSeparated(optimizedPlan.metrics.after.status)}
+                      </div>
                     </div>
                   </div>
                 </div>
