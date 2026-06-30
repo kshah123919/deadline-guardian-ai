@@ -55,6 +55,12 @@ export default function FocusSessionMode({
     focusReminderModeRef.current = focusReminderMode;
   }, [focusReminderMode]);
 
+  // Keep track of the current elapsed ms so callbacks inside useEffect can see the latest value
+  const elapsedMsRef = useRef(elapsedMs);
+  useEffect(() => {
+    elapsedMsRef.current = elapsedMs;
+  }, [elapsedMs]);
+
   // Interruption detection triggers
   useEffect(() => {
     const handleInterruptionStart = (eventType: 'visibilitychange' | 'blur') => {
@@ -88,7 +94,13 @@ export default function FocusSessionMode({
           if (duration > 30000) {
             setPendingInterruption(newInterruption);
             // Play notification/alert sound depending on settings
-            playReminderSound(focusReminderModeRef.current);
+            playReminderSound(focusReminderModeRef.current, {
+              taskName: task.title,
+              isCompleted: task.status === 'completed',
+              elapsedMs: elapsedMsRef.current,
+              awayMs: duration,
+              estimatedDuration: task.estimatedDuration
+            });
           } else {
             // Small interruption: just save and continue
             setInterruptions(prev => [...prev, newInterruption]);
