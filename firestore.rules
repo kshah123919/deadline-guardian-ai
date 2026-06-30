@@ -28,7 +28,7 @@ service cloud.firestore {
       // Allow profile updates for user metrics or details
       allow update: if isOwner(userId) && isValidUser(incoming()) && (
         incoming().createdAt == existing().createdAt && (
-          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'email', 'avatar', 'role', 'weeklyGoal', 'completedCount'])
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'email', 'avatar', 'role', 'weeklyGoal', 'completedCount', 'themePreference'])
         )
       );
 
@@ -77,14 +77,15 @@ service cloud.firestore {
 
     // Data validations
     function isValidUser(data) {
-      return data.keys().hasAll(['name', 'email', 'avatar', 'role', 'weeklyGoal', 'completedCount', 'createdAt'])
-        && data.keys().size() == 7
+      return data.keys().hasAll(['name', 'email', 'avatar', 'role', 'weeklyGoal', 'completedCount', 'themePreference', 'createdAt'])
+        && data.keys().size() == 8
         && data.name is string && data.name.size() <= 100
         && data.email is string && data.email.size() <= 100
         && data.avatar is string && data.avatar.size() <= 500
         && data.role is string && data.role.size() <= 100
         && data.weeklyGoal is int && data.weeklyGoal >= 0
-        && data.completedCount is int && data.completedCount >= 0;
+        && data.completedCount is int && data.completedCount >= 0
+        && data.themePreference is string && (data.themePreference == 'light' || data.themePreference == 'dark');
     }
 
     function isValidTask(data) {

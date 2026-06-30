@@ -702,7 +702,7 @@ export default function GuardianRescue({
               <ShieldCheck className="w-5 h-5" />
             </span>
             <span className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-              Demo Feature Highlight
+              Core Feature
             </span>
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-theme-primary mt-1 flex items-center gap-2">
