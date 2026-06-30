@@ -140,6 +140,27 @@ An elegant distraction-shield workspace allowing users to enter high-attention s
 - **Telemetry Recording:** Focus sessions run a local state engine that tracks focus duration, browser focus losses, manual pauses, and interruption counts.
 - **Intelligent Focus Efficiency Rating:** Formula-driven metrics calculating performance based on distraction frequency.
 - **Historic Reports:** Generates post-session reports instantly committed to Firestore.
+- **Context-Aware Voice Guidance:** An advanced voice assistant that intelligently detects when the user leaves and returns to the application during an active focus session. Instead of repeating a generic reminder, the assistant responds dynamically with encouraging, professional, and adaptive feedback:
+  - **Absence < 30 seconds:** No voice trigger (unobtrusive design).
+  - **Absence 30s - 2m:** *"Welcome back. Let's continue your [Task Name] task."*
+  - **Absence 2m - 10m:** *"You were away for [X minutes]. Your focus session is still active. Let's get back to [Task Name]."*
+  - **Absence > 10m:** *"You've been away for [X minutes]. Resume your focus session to stay on schedule."*
+  - **Session ends while away:** *"Your focus session for [Task Name] ended while you were away. Ready to start another session?"*
+  - **Task completed:** *"Welcome back! Great job completing [Task Name]. What's next?"*
+
+### 🎙️ Smart Focus Monitoring
+Deadline Guardian AI continuously monitors the focus session state and browser visibility to provide intelligent voice reminders only when appropriate.
+- **Absence Measurement:** Measures the exact duration of browser tab inactivity or focus loss to calibrate the voice intervention dynamically.
+- **Minimal Distraction Philosophy:** Avoids annoying or unnecessary alerts, selecting only critical return-to-focus milestones to trigger speech synthesis.
+- **Natural Productivity Experience:** Delivers motivational and supportive feedback based on real performance metrics, avoiding aggressive or repetitive phrasing found in traditional trackers.
+
+#### 🎯 Focus Shields Enabled
+- [x] Deep Focus Timer & Telemetry
+- [x] Focus Efficiency & Interruption Tracking
+- [x] Firestore Persistence & Analytics Reports
+- [x] Context-Aware Voice Assistant
+- [x] Smart Focus Monitoring
+- [x] Adaptive Voice Reminders
 
 ---
 
