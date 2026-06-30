@@ -2,8 +2,6 @@
 
 <div align="center">
 
-![Deadline Guardian AI Banner](https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80)
-
 ### *Proactively preventing missed deadlines by intelligently planning, prioritizing, and rescuing overloaded schedules.*
 
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
@@ -13,10 +11,6 @@
 [![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![Gemini_API](https://img.shields.io/badge/Gemini_API-8E75FF?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
 [![License:_MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-
----
-
-[Explore Live App](https://ais-pre-5oypylk2bb7mo5zdnlxbtk-765597900594.asia-southeast1.run.app) · [Report Bug](https://github.com/krishshah062021/deadline-guardian-ai/issues) · [Request Feature](https://github.com/krishshah062021/deadline-guardian-ai/issues)
 
 </div>
 
@@ -48,7 +42,7 @@
     - [Environment Variables Config (`.env`)](#environment-variables-config-env)
   - [📸 Screenshots](#-screenshots)
   - [🚀 Future Roadmap](#-future-roadmap)
-  - [👤 Author](#-author)
+  - [👨💻 Author](#-author)
   - [📄 License](#-license)
 
 ---
@@ -316,12 +310,11 @@ VITE_FIREBASE_APP_ID=your_app_id
 
 ---
 
-## 👤 Author
+## 👨💻 Author
 
 **Krish Shah**
-- Email: [krishshah062021@gmail.com](mailto:krishshah062021@gmail.com)
-- GitHub: [github.com/krishshah062021](https://github.com/krishshah062021)
-- LinkedIn: [linkedin.com/in/krishshah062021](https://linkedin.com/in/krishshah062021)
+
+Hackathon Participant • Full Stack Developer • Open Source Contributor
 
 ---
 
