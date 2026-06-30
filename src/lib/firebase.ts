@@ -3,7 +3,6 @@ import {
   getAuth, 
   GoogleAuthProvider, 
   signInWithPopup, 
-  signInAnonymously,
   signOut,
   onAuthStateChanged,
   User as FirebaseUser
@@ -171,22 +170,6 @@ export async function signInWithGoogle(): Promise<UserProfile> {
     } else {
       console.error('[Auth Error] Error during Google login:', error);
     }
-    throw error;
-  }
-}
-
-/**
- * Sign in anonymously (Guest / Demo mode).
- */
-export async function signInAsGuest(): Promise<UserProfile> {
-  try {
-    console.log('[Auth Action] Initiating Guest anonymous sign-in...');
-    const result = await signInAnonymously(auth);
-    console.log('[Auth Action] Guest anonymous sign-in successful. Syncing user profile...');
-    const profile = await syncUserToFirestore(result.user);
-    return profile;
-  } catch (error: any) {
-    console.error('[Auth Error] Error during Guest anonymous login:', error);
     throw error;
   }
 }

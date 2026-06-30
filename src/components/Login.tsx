@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { Shield, Sparkles, LogIn, Mail, Lock, CheckCircle2 } from 'lucide-react';
+import { Shield, Sparkles, CheckCircle2 } from 'lucide-react';
 import { UserProfile } from '../types';
-import { signInWithGoogle, signInAsGuest } from '../lib/firebase';
+import { signInWithGoogle } from '../lib/firebase';
 
 interface LoginProps {
   onLogin: (profile: UserProfile) => void;
@@ -10,26 +10,8 @@ interface LoginProps {
 }
 
 export default function Login({ onLogin, isDark }: LoginProps) {
-  const [email, setEmail] = useState('demo@deadlineguardian.ai');
-  const [password, setPassword] = useState('••••••••');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const handleGuestLogin = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      console.log('[Login Component] Account Login selected. Attempting Firebase Anonymous Sign-In...');
-      const profile = await signInAsGuest();
-      console.log('[Login Component] Anonymous Sign-In succeeded, profile loaded:', profile);
-      onLogin(profile);
-    } catch (err: any) {
-      console.error('[Login Component] Failed to authenticate anonymously:', err);
-      setError(`Guest Login failed. Details: ${err.message || err.toString()}`);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -133,9 +115,9 @@ export default function Login({ onLogin, isDark }: LoginProps) {
           </div>
         </div>
 
-        {/* Right Side: Login Form Interface */}
+        {/* Right Side: Login Interface */}
         <div className="lg:col-span-5 flex flex-col justify-center border rounded-2xl p-6 md:p-8 shadow-sm bg-theme-card/85 border-theme-border">
-          <div className="mb-6">
+          <div className="mb-6 text-center lg:text-left">
             <h3 className="text-xl font-bold text-theme-primary">Welcome Back</h3>
             <p className="text-xs text-theme-muted mt-1">Access your guardian dashboard to start tracking</p>
           </div>
@@ -146,87 +128,28 @@ export default function Login({ onLogin, isDark }: LoginProps) {
             </div>
           )}
 
-          <form onSubmit={(e) => { e.preventDefault(); handleGuestLogin(); }} className="space-y-4">
-            <div>
-              <label className="block text-xs font-mono font-medium text-theme-secondary uppercase tracking-wider mb-1.5">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-muted" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-theme-bg border-theme-border text-theme-primary placeholder-theme-muted"
-                  placeholder="name@company.com"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-mono font-medium text-theme-secondary uppercase tracking-wider mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-muted" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-theme-bg border-theme-border text-theme-primary placeholder-theme-muted"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="text-right">
-              <a href="#" className="text-xs text-indigo-500 hover:underline">Forgot password?</a>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white py-3 rounded-xl text-sm font-semibold shadow-lg shadow-indigo-600/20 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <LogIn className="w-4 h-4" />
-                  <span>Log in with Account</span>
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* Divider */}
-          <div className="relative my-6 flex items-center justify-center">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-theme-border" />
-            </div>
-            <span className="relative px-3 text-xs text-theme-muted bg-theme-bg font-mono">
-              OR
-            </span>
-          </div>
-
-          {/* Social Sign-In */}
+          {/* Google Sign-In Primary Call to Action */}
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
             type="button"
-            className="w-full flex items-center justify-center gap-2 py-2.5 border rounded-xl text-xs font-semibold cursor-pointer active:scale-[0.98] transition-all border-theme-border bg-theme-bg hover:bg-theme-card text-theme-primary disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-3 py-3 border rounded-xl text-sm font-semibold cursor-pointer active:scale-[0.98] transition-all border-theme-border bg-theme-bg hover:bg-theme-card text-theme-primary disabled:opacity-50"
           >
-            <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-              <g transform="matrix(1, 0, 0, 1, 0, 0)">
-                <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.58h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.48C21.68,11.83 21.56,11.4 21.35,11.1z" fill="#4285F4" />
-                <path d="M12,20.58c2.59,0 4.77,-0.86 6.36,-2.3l-3.3,-2.58c-0.91,0.61 -2.08,0.98 -3.06,0.98 -2.36,0 -4.36,-1.59 -5.07,-3.72H3.45v2.66C5.07,18.79 8.35,20.58 12,20.58z" fill="#34A853" />
-                <path d="M6.93,12.96c-0.18,-0.54 -0.28,-1.12 -0.28,-1.71s0.1,-1.17 0.28,-1.71V6.88H3.45C2.84,8.1 2.5,9.47 2.5,10.92s0.34,2.82 0.95,4.04l3.48,-2.66z" fill="#FBBC05" />
-                <path d="M12,6.5c1.41,0 2.68,0.49 3.68,1.44l2.76,-2.76C16.77,3.52 14.59,2.5 12,2.5 8.35,2.5 5.07,4.29 3.45,7.95l3.48,2.66C7.64,8.09 9.64,6.5 12,6.5z" fill="#EA4335" />
-              </g>
-            </svg>
-            <span>Continue with Google</span>
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-theme-primary border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <svg className="w-5 h-5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="matrix(1, 0, 0, 1, 0, 0)">
+                    <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.58h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.48C21.68,11.83 21.56,11.4 21.35,11.1z" fill="#4285F4" />
+                    <path d="M12,20.58c2.59,0 4.77,-0.86 6.36,-2.3l-3.3,-2.58c-0.91,0.61 -2.08,0.98 -3.06,0.98 -2.36,0 -4.36,-1.59 -5.07,-3.72H3.45v2.66C5.07,18.79 8.35,20.58 12,20.58z" fill="#34A853" />
+                    <path d="M6.93,12.96c-0.18,-0.54 -0.28,-1.12 -0.28,-1.71s0.1,-1.17 0.28,-1.71V6.88H3.45C2.84,8.1 2.5,9.47 2.5,10.92s0.34,2.82 0.95,4.04l3.48,-2.66z" fill="#FBBC05" />
+                    <path d="M12,6.5c1.41,0 2.68,0.49 3.68,1.44l2.76,-2.76C16.77,3.52 14.59,2.5 12,2.5 8.35,2.5 5.07,4.29 3.45,7.95l3.48,2.66C7.64,8.09 9.64,6.5 12,6.5z" fill="#EA4335" />
+                  </g>
+                </svg>
+                <span>Continue with Google</span>
+              </>
+            )}
           </button>
         </div>
 
