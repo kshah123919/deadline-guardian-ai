@@ -266,7 +266,7 @@ Most productivity apps act as **passive digital paper**. They record what you pu
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/krishshah062021/deadline-guardian-ai.git
+   git clone <YOUR_GITHUB_REPOSITORY_URL>
    cd deadline-guardian-ai
    ```
 
